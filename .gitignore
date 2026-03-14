@@ -1,4 +1,6 @@
 
 **/__pycache__/
+scripts/
+vipsystem/
 
 config.env
