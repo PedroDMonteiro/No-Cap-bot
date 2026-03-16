@@ -141,9 +141,3 @@ class Cog_Configuration(Cog, name = "Configuration"):
         embed.set_image(url=f"attachment://{icon_file.filename}")
 
         await context.reply(embed=embed,files=[icon_file])
-
-    @commands.command(name="test")
-    async def test(self, context: Context, member: Member):
-        await context.reply(f"{member.global_name=}")
-        await context.reply(f"{member.display_name=}")
-        await context.reply(f"{member.name=}")
