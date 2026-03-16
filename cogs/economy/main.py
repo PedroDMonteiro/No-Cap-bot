@@ -1,8 +1,9 @@
 import asyncio
 import datetime
 import random
+import types
 
-from discord import DMChannel, Embed, Emoji, File, Member,Message, Role, VoiceState
+from discord import DMChannel, Embed, Emoji, File, Member,Message, Role, VoiceChannel, VoiceState
 
 from discord.ext import commands
 from discord.ext.commands.context import Context
@@ -19,6 +20,9 @@ async def setup(bot: MyBot):
     await bot.add_cog(Cog_Economy(bot))
 
 def talking(voice: VoiceState) -> bool:
+    if voice.channel is None:
+        return False
+    
     if voice.mute:
         return False
     
@@ -45,6 +49,7 @@ class Cog_Economy(Cog, name = "Economy"):
                         ]
         self.call_xp = [859442274698264586]
         self.call_vips = [860330511787622400]
+        self.talking = {}
 
     async def cog_load(self):
         print(f"{self.__cog_name__} is up")
@@ -74,79 +79,58 @@ class Cog_Economy(Cog, name = "Economy"):
         await asyncio.sleep(15)
         self.in_cooldown.remove(member.id)
 
-    @commands.Cog.listener()
-    async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState):
-
-        if after.channel:
-            #change channel or alter state in channel
-            if before.channel:
-
-                #change channel
-                if before.channel.id != after.channel.id:
-                    #stop talking
-                    if talking(before) and not talking(after):
-                        if member.id in self.call_xp:
-                            # add xp
-                            # and remove from xp
-                            ...
-                    elif not talking(before) and talking(after):
-                        if len([m for m in before.channel.members 
-                                if not m.bot and talking(m.voice)]) >= 2:
-                            self.call_vips[member.id] = int(datetime.datetime.now().timestamp()//1)
-        # return
-        if before.channel:
-            
-            members = [m for m in before.channel.members 
-                       if not m.bot and talking(m.voice)]
-            if len(members) > 1:
-                if before.mute or before.deaf:
-                    return
-                
-        if before.channel is None and after.channel is None:
-            #something wierd happened
+    def add_talking_prizes(self, member_id: int):
+        if member_id not in self.talking:
             return
         
-        elif before.channel is None and after.channel is not None:
+        now = int(datetime.datetime.now().timestamp()//1)
+        seconds_talking = now - self.talking[member_id]
+
+        # 15xp per 10 min
+        xp = 15*(seconds_talking/(10*60))
+        xp = int(xp//1)
+        self.database.add_xp(identifier=member_id,points=xp)
+
+        # 5 coins per hour
+        coins = 5*(seconds_talking//(60*60))
+        self.database.add_coins(identifier=member_id,coins=coins)
+
+        self.talking.pop(member_id, 0)
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState):
+        if after.channel is None and before.channel is None:
+            print("what??")
+            return
+        
+        if before.channel is not None and after.channel is not None:
+            if before.channel == after.channel:
+                if talking(before) == talking(after):
+                    #not related to talking
+                    return
+
+        now = int(datetime.datetime.now().timestamp()//1)
+        
+        if talking(before):
+            self.add_talking_prizes(member_id=member.id)
             
-            #check if channel is suitable for xp
-            #adds id to counting_xp
-            channel = after.channel
-            await channel.send(f'{member.name} has joined voice channel: {channel.name}')
-            # You can send a message to a specific text channel
-            # text_channel = bot.get_channel(YOUR_TEXT_CHANNEL_ID)
-            # await text_channel.send(f'{member.name} just entered {channel.name}!')
+            members_talking_before = [m for m in before.channel.members
+                                      if (not m.bot) and talking(m.voice)]
+            if len(members_talking_before) == 1:
+                self.add_talking_prizes(member_id=members_talking_before[0].id)
 
-        # A user leaves a channel (before.channel is not None, after.channel is None)
-        elif before.channel is not None and after.channel is None:
-            # if id in countg_xp add total xp to the database
-            channel = before.channel
-            await channel.send(f'{member.name} has left voice channel: {channel.name}')
-            # text_channel = bot.get_channel(YOUR_TEXT_CHANNEL_ID)
-            # await text_channel.send(f'{member.name} just left {channel.name}.')
+        if talking(after):
+            members_talking_after = [m for m in after.channel.members 
+                                    if (not m.bot) and talking(m.voice)]
+            if len(members_talking_after) >= 2:
+                self.talking[member.id] = now
 
-        # A user moves between channels
-        elif before.channel is not None and after.channel is not None:
-            if member.id in self.counting_xp:
-                if not self.allow_xp(after.channel):
-                    ...
-                    #adds xp to database
-
-            if self.allow_xp(after.channel):
-                ...
-
-            # check if new channel its suitable for xp
-            #   if not 
-            #       if id in countg_xp add total xp to the database
-            #       if not in return
-            #   if yes add id to counting_xp
-            if before.channel != after.channel:
-                await after.channel.send(f'{member.name} moved from {before.channel.name} to {after.channel.name}')
-
-            if before.mute != after.mute:
-                await after.channel.send("Mute mudou")
-        print(member)
-        print(f"{before.self_mute=} {before.self_deaf=}")
-        print(f"{after.self_mute=} {after.self_deaf=}")
+            if len(members_talking_after) == 2:
+                other_id = members_talking_after[0].id
+                if other_id == member.id:
+                    other_id = members_talking_after[1].id
+                    
+                self.talking[other_id] = now
 
     @commands.group(name="balance",
                     aliases=["bal","atm","saldo","coins","moedas","moeda"],
