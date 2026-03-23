@@ -31,7 +31,7 @@ class Cog_Bump(Cog, name = "Bump"):
         now = int(datetime.datetime.now().timestamp()//1)
 
         if now >= self.last_bumped + 2*60*60:
-            await self.channel.send("Deem bump\n\n-# <@&865415575902355487>\n-# <@&945038105432424449>")
+            await self.channel.send("Dê bump e ganhe 10 NoCoins\n-# <@&945038105432424449>")
 
     @reminder.before_loop
     async def before_update_bot(self):
