@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 
 from dotenv import load_dotenv
+from log import Log
 
 class MyBot(commands.Bot):
     MAIN_GUILD = 859442271908266034
@@ -22,7 +23,6 @@ class MyBot(commands.Bot):
                          intents=discord.Intents.all(),)
         self.loaded_cogs = set()
         self.token = os.getenv("TOKEN")
-        self.log = Log(self)
         self.add_check(self.check)
 
     async def check(self, context: commands.Context):
@@ -45,7 +45,9 @@ class MyBot(commands.Bot):
         await self.process_commands(after)
 
     async def on_ready(self):
-        self.log_channel = await self.fetch_channel(862204731896365086)
+        log_channel = await self.fetch_channel(862204731896365086)
+        self.log = Log(self,error=log_channel)
+
         print(f"Bot conectado como {self.user}")
 
     async def setup_hook(self):
