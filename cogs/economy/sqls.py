@@ -59,7 +59,7 @@ class Database(db):
             
         sql=""
         sql +="\n"+f"UPDATE user"
-        sql +="\n"+f"SET coins = GREATEST(coins + {coins}, 0)"
+        sql +="\n"+f"SET coins = coins + {coins}"
         sql +="\n"+f"WHERE id = '{id}'"
         self.update(sql)
 
@@ -114,7 +114,7 @@ class Database(db):
             
         sql=""
         sql +="\n"+f"UPDATE user"
-        sql +="\n"+f"SET xp = xp + {points}, 0"
+        sql +="\n"+f"SET xp = xp + {points}"
         sql +="\n"+f"WHERE id = '{id}'"
         self.update(sql)
 

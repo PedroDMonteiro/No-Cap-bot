@@ -65,13 +65,14 @@ class Cog_Economy(Cog, name = "Economy"):
     async def on_message(self, message: Message):
         if message.author.bot:
             return
+        
         if message.channel.id not in self.chat_xp:
             return
         
-        member = message.author
-        if member.id in self.in_cooldown:
+        if message.author.id in self.in_cooldown:
             return
         
+        member = message.author
         self.in_cooldown.add(member.id)
 
         xp = random.randint(1,15)
