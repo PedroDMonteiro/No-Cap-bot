@@ -1,4 +1,4 @@
-from discord import Member
+from discord import Embed, File, Member, Message
 from discord.ext import commands
 from discord.ext.commands.context import Context
 from discord.ext.commands import Bot,Cog
@@ -17,9 +17,9 @@ class Cog_Debug(Cog, name= "Debug"):
     async def cog_load(self):
         print(f"{self.__cog_name__} is up")
 
-    @commands.command(name="teste")
+    @commands.command(name="debug")
     @checks.is_developer()
-    async def teste(self, context: Context, cog_name: str, attribute_name: str) -> None:
+    async def debug(self, context: Context, cog_name: str, attribute_name: str) -> None:
         cog_instance = self.bot.get_cog(cog_name) # The name here is the class name
 
         if cog_instance:
