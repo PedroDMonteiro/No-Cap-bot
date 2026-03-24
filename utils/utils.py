@@ -21,3 +21,20 @@ class Utils:
             return True
         except Exception as err:
             return False
+    
+    # return Ah Bm Cs
+    def format_seconds(seconds: int) -> str:
+        hours = int((seconds - seconds%3600)/3600)
+        minutes = int((seconds%3600 - seconds%60)/60)
+        seconds = seconds%60
+
+        t = ""
+        if hours:
+            t += f"{hours:02}h "
+            
+        if minutes or hours:
+            t += f"{minutes:02}m "
+            
+        t += f"{seconds:02}s"
+        
+        return t
