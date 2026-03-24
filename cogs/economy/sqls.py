@@ -64,8 +64,22 @@ class Database(db):
         self.update(sql)
 
         return self.get(identifier=identifier)
+    
+    def remove_coins(self, identifier: int|Member|User, coins: int) -> md_User:
+        if isinstance(identifier,int):
+            id = identifier
+        else:
+            id = identifier.id
+            
+        sql=""
+        sql +="\n"+f"UPDATE user"
+        sql +="\n"+f"SET coins = GREATEST(coins - {coins}, 0)"
+        sql +="\n"+f"WHERE id = '{id}'"
+        self.update(sql)
 
-    def edit_coins(self, identifier: int|Member|User, coins: int) -> md_User:
+        return self.get(identifier=identifier)
+
+    def set_coins(self, identifier: int|Member|User, coins: int) -> md_User:
         if isinstance(identifier,int):
             id = identifier
         else:
@@ -100,13 +114,27 @@ class Database(db):
             
         sql=""
         sql +="\n"+f"UPDATE user"
-        sql +="\n"+f"SET xp = GREATEST(xp + {points}, 0)"
+        sql +="\n"+f"SET xp = xp + {points}, 0"
         sql +="\n"+f"WHERE id = '{id}'"
         self.update(sql)
 
         return self.get(identifier=identifier)
+    
+    def remove_xp(self, identifier: int|Member|User, points: int) -> md_User:
+        if isinstance(identifier,int):
+            id = identifier
+        else:
+            id = identifier.id
+            
+        sql=""
+        sql +="\n"+f"UPDATE user"
+        sql +="\n"+f"SET xp = GREATEST(xp - {points}, 0)"
+        sql +="\n"+f"WHERE id = '{id}'"
+        self.update(sql)
 
-    def edit_xp(self, identifier: int|Member|User, points: int) -> md_User:
+        return self.get(identifier=identifier)
+    
+    def set_xp(self, identifier: int|Member|User, points: int) -> md_User:
         if isinstance(identifier,int):
             id = identifier
         else:
