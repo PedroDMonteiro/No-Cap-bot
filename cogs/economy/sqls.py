@@ -13,7 +13,7 @@ class Database(db):
     def new_member(self, user:Member):
         try:
             sql=""
-            sql +="\n"+f"INSERT INTO USER (id,username,coins)"
+            sql +="\n"+f"INSERT INTO member (id,username,coins)"
             sql +="\n"+f"values ('{user.id}', '{user.name}',100)"
             self.update(sql)
         except Exception as err:
@@ -27,7 +27,7 @@ class Database(db):
 
         sql=""
         sql +="\n"+f"SELECT username,xp,coins"
-        sql +="\n"+f"FROM user"
+        sql +="\n"+f"FROM member"
         sql +="\n"+f"WHERE id = '{id}'"
         row = self.select_one(sql)
 
@@ -42,7 +42,7 @@ class Database(db):
     def get_all(self, ) -> list[md_User]:
         sql=""
         sql +="\n"+f"SELECT id,username,xp,coins"
-        sql +="\n"+f"FROM user"
+        sql +="\n"+f"FROM member"
         rows = self.select_all(sql)
 
         return [md_User(id=int(row[0]),
@@ -58,7 +58,7 @@ class Database(db):
             id = identifier.id
             
         sql=""
-        sql +="\n"+f"UPDATE user"
+        sql +="\n"+f"UPDATE member"
         sql +="\n"+f"SET coins = coins + {coins}"
         sql +="\n"+f"WHERE id = '{id}'"
         self.update(sql)
@@ -72,7 +72,7 @@ class Database(db):
             id = identifier.id
             
         sql=""
-        sql +="\n"+f"UPDATE user"
+        sql +="\n"+f"UPDATE member"
         sql +="\n"+f"SET coins = GREATEST(coins - {coins}, 0)"
         sql +="\n"+f"WHERE id = '{id}'"
         self.update(sql)
@@ -86,7 +86,7 @@ class Database(db):
             id = identifier.id
 
         sql=""
-        sql +="\n"+f"UPDATE user"
+        sql +="\n"+f"UPDATE member"
         sql +="\n"+f"SET coins = {coins}"
         sql +="\n"+f"WHERE id = '{id}'"
         self.update(sql)
@@ -96,7 +96,7 @@ class Database(db):
     def get_coins_rank(self, ) -> list[md_User]:
         sql=""
         sql +="\n"+f"SELECT id,username,xp,coins"
-        sql +="\n"+f"FROM user"
+        sql +="\n"+f"FROM member"
         sql +="\n"+f"ORDER BY coins desc"
         rows = self.select_all(sql)
 
@@ -113,7 +113,7 @@ class Database(db):
             id = identifier.id
             
         sql=""
-        sql +="\n"+f"UPDATE user"
+        sql +="\n"+f"UPDATE member"
         sql +="\n"+f"SET xp = xp + {points}"
         sql +="\n"+f"WHERE id = '{id}'"
         self.update(sql)
@@ -127,7 +127,7 @@ class Database(db):
             id = identifier.id
             
         sql=""
-        sql +="\n"+f"UPDATE user"
+        sql +="\n"+f"UPDATE member"
         sql +="\n"+f"SET xp = GREATEST(xp - {points}, 0)"
         sql +="\n"+f"WHERE id = '{id}'"
         self.update(sql)
@@ -141,7 +141,7 @@ class Database(db):
             id = identifier.id
             
         sql=""
-        sql +="\n"+f"UPDATE user"
+        sql +="\n"+f"UPDATE member"
         sql +="\n"+f"SET xp = {points}"
         sql +="\n"+f"WHERE id = '{id}'"
         self.update(sql)
@@ -151,7 +151,7 @@ class Database(db):
     def get_xp_rank(self, ) -> list[md_User]:
         sql=""
         sql +="\n"+f"SELECT id,username,xp,coins"
-        sql +="\n"+f"FROM user"
+        sql +="\n"+f"FROM member"
         sql +="\n"+f"ORDER BY xp desc"
         rows = self.select_all(sql)
 

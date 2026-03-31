@@ -8,7 +8,7 @@ class Database(db):
     def bumped(self, user_id:int):
         try:
             sql=""
-            sql +="\n"+f"UPDATE USER"
+            sql +="\n"+f"UPDATE member"
             sql +="\n"+f"SET coins = coins + 10"
             sql +="\n"+f"WHERE id = '{user_id}'"
             self.update(sql)
