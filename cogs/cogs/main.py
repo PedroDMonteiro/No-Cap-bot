@@ -4,6 +4,7 @@ from discord.ext import commands
 from discord.ext.commands.context import Context
 from discord.ext.commands import Cog
 
+from log import Log_Type
 from utils import checks
 from myBot import MyBot
 from utils.configuration import Terminal_Style
@@ -54,15 +55,17 @@ class Cog_Cogs(Cog, name = "Cogs"):
                 if filename.endswith(".py"):
                     await self.bot.load_extension(f"cogs.{cog_name}.{filename[:-3]}")
                     print(f"{cog_name}.{filename[:-3]} loaded{Terminal_Style.RESET}")
-            except Exception as e:
-                print(f'{Terminal_Style.RED}Error to load {cog_name}: {e}{Terminal_Style.RESET}')
+            except Exception as err:
+                await self.bot.log.embed(type=Log_Type.ERROR,module="Cog Loader",message=f"Error to load {cog_name}: {err}")
                 await self.unload(cog_name)
                 return
         try:
             self.bot.loaded_cogs.add(cog_name)
+            self.bot.log.print(type=Log_Type.DEBUG,module="Cog Loader",message=f"{cog_name} loaded")
             print(f'{Terminal_Style.GREEN}Cog {cog_name} loaded{Terminal_Style.RESET}')
-        except:
-            print(f'{Terminal_Style.RED}Error to load {cog_name}: {e}{Terminal_Style.RESET}')
+        except Exception as err:
+            await self.bot.log.embed(type=Log_Type.ERROR,module="Loader",message=f"Error to load {cog_name}: {err}")
+            print(f'{Terminal_Style.RED}Error to load {cog_name}: {err}{Terminal_Style.RESET}')
             await self.unload(cog_name)
 
     @cogs.command(name="unload",

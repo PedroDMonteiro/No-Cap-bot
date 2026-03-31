@@ -23,3 +23,15 @@ def is_adm():
         return True
     
     return commands.check_any(commands.check(predicate),)
+
+def is_banker():
+    async def predicate(context: Context):
+        cog = context.bot.get_cog("Economy")
+        bankers = getattr(cog, "bankers")
+
+        if context.author.id in bankers:
+            raise commands.CheckFailure("Not banker")
+        
+        return True
+    
+    return commands.check_any(commands.check(predicate),is_adm())
