@@ -22,7 +22,7 @@ class Terminal_Colors(Enum):
     CALL = "\x1b[33m"
     GUILD = "\x1b[36m"
     MEMBER = "\x1b[36m"
-    DEBUG = "\x1b[0m"
+    DEBUG = "\x1b[34m"
 
 class Log_Type(Enum):
     DEFAULT = 0
@@ -73,8 +73,9 @@ class Log():
 
             self.channels[key] = channel
 
-    def print(self, type, module, message):
-        print(f"{Terminal_Colors[type]}[{datetime.datetime.now()}] {module}: {message}{Terminal_Colors.RESET}")
+    def print(self, type: Log_Type, module: str, message: str):
+        time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"{Terminal_Colors[type.name].value}{time} {module}: {message}{Terminal_Colors.RESET.value}")
 
     async def embed(self, type: Log_Type, module: str, message:str, file: File= None) -> Message:
         embed = Embed(title=module,
@@ -84,6 +85,13 @@ class Log():
         if file:
             embed.set_image(url=f"attachment://{file.filename}")
 
+        channel = self.channels[type.name.lower()]
+        if channel is None:
+            raise Exception(f"{type.name}")
+        
         msg = await self.channels[type.name.lower()].send(embed=embed,file=file)
-        print(msg)
+
+        if type in [Log_Type.ERROR,Log_Type.DEBUG]:
+            self.print(type=type,module=module,message=message)
+
         return msg

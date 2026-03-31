@@ -6,37 +6,33 @@ from dotenv import load_dotenv
 from log import Log
 
 class MyBot(commands.Bot):
-    MAIN_GUILD = 859442271908266034
-    TEST_GUILD = 1347349188152791102
-    COMMAND_CHANNELS = [866907725463289926] # comandos
-
-    ADM_ROLES = [867875024193978368, # ADM
-                 861808601421185034, # VICE
-                 933768048865853501, # DONA
-                 868847569336426546, # DONO
-                 ]
-
-    def __init__(self):
+    def __init__(self,
+                 guild: int,
+                 adm_roles:list[int] = [],
+                 commands_channels:list[int] = [],
+                 ):
         load_dotenv(dotenv_path='./config.env')
         super().__init__(command_prefix=commands.when_mentioned_or("nc!"),
                          case_insensitive=True,
                          intents=discord.Intents.all(),)
+        self.guild_id = guild
+        self.adm_roles = adm_roles
+        self.commands_channels = commands_channels
         self.loaded_cogs = set()
         self.token = os.getenv("TOKEN")
         self.add_check(self.check)
 
     async def check(self, context: commands.Context):
-        print(f"{context.author}:{context.command.name}")
         if context.guild:
             if context.author.guild_permissions.administrator:
                 return True
             
             roles = [role.id for role in context.author.roles]
-            for adm_role in self.ADM_ROLES:
+            for adm_role in self.adm_roles:
                 if adm_role in roles:
                     return True
                 
-            if context.channel.id in self.COMMAND_CHANNELS:
+            if context.channel.id in self.commands_channels:
                 return True
             
         return False
@@ -45,8 +41,13 @@ class MyBot(commands.Bot):
         await self.process_commands(after)
 
     async def on_ready(self):
-        log_channel = await self.fetch_channel(862204731896365086)
-        self.log = Log(self,error=log_channel)
+        self.log = Log(self,
+                       default=1485802065509879948,
+                       error=1485800424060489851,
+                       moderation=873198241242578955,
+                       call=968661076579344535,
+                       guild=968662877605093386,
+                       debug=1485801764623089734,)
 
         print(f"Bot conectado como {self.user}")
 
