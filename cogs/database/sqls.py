@@ -17,7 +17,7 @@ class Database(db):
         return len(rows) > 0
     
     def get_columns(self, table: str) -> list[str]:
-        if not Database.table_exist(table):
+        if not self.table_exist(table):
             raise Table_Not_Found(table)
         
         query = ""

@@ -2,6 +2,7 @@ from discord.ext import commands
 from discord.ext.commands.context import Context
 from discord.ext.commands import Bot,Cog
 
+from log import Log_Type
 from myBot import MyBot
 from cogs.database.sqls import Database as db
 from utils import checks
@@ -23,14 +24,22 @@ class Cog_Database(Cog, name= "Database"):
     @checks.is_developer()
     async def sql(self, context: Context, *args) -> None:
         query = " ".join(args)
+
         if query == "":
             await context.send("query needed")
 
-        initial = query[:10].lower()
-        if initial.startswith("select"):
-            rows = self.database.select_all(query)
-        else:
-            self.database.update(query)
+        rows = []
+        try:
+            initial = query[:10].lower()
+            if initial.startswith("select"):
+                rows = self.database.select_all(query)
+            else:
+                self.database.update(query)
+        except Exception as err:
+            await self.bot.log.embed(type=Log_Type.ERROR,
+                                     module=self.__cog_name__,
+                                     message=f"Erro na query `{query}`:\n{err}")
+            return
 
         await context.send(f"` {query} `")
         if len(rows) == 0:
