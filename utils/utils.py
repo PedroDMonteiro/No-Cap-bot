@@ -38,3 +38,12 @@ class Utils:
         t += f"{seconds:02}s"
         
         return t
+
+    def emoji_url(id:int, animated: bool = False) -> str:
+        """:class:`str`:Returns emoji url based on its id
+        """
+        url = f"https://cdn.discordapp.com/emojis/{id}.webp"
+        if animated:
+            url += "?animated=true"
+
+        return url
