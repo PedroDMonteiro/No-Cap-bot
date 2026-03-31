@@ -1,14 +1,13 @@
 from discord import Interaction, ButtonStyle
 from discord.ui import Button, View
 
+from log import Log_Type
 from utils.erros.database import Primary_Key_Duplicate
 
 from cogs.insta.sqls import Database as db
 from cogs.insta.modals import Comment_Modal
 
 from models.insta import Insta
-
-import cogs.log as log
 
 from utils.my_views import Ok_Cancelar_View
 
@@ -63,14 +62,13 @@ class Post(View):
                                        user_id=interaction.user.id)
             like.label = str(like_count)
             await interaction.response.edit_message(content=interaction.message.content,view=self)
-            #log new like
+
         except Primary_Key_Duplicate as err:
             await interaction.response.send_message('Você já votou',ephemeral=True)
         except Exception as err:
             print(type(err))
             await interaction.response.send_message("Erro ao dar like",ephemeral=True)
-            # await log.insta_like(interaction=interaction,err=err)
-
+            await interaction.client.log.embed(type=Log_Type.ERROR,module="(Insta) Like",message=f"Erro ao tentar comentar:{err}")
 
     async def comment_callback(self, interaction: Interaction):
         try:
@@ -78,7 +76,7 @@ class Post(View):
             #log new comment
         except Exception as err:
             await interaction.response.send_message("Erro ao mandar comentário",ephemeral=True)
-            await log.insta_comment_error(interaction=interaction,comment='',err=err)
+            await interaction.client.log.embed(type=Log_Type.ERROR,module="(Insta) Comentário",message=f"Erro ao tentar comentar:{err}")
 
 
     async def info_callback(self, interaction: Interaction):
@@ -99,8 +97,7 @@ class Post(View):
 
             await interaction.response.send_message(likes_text+'\n'+comments_text,ephemeral=True)
         except Exception as err:
-            print("erro ao mandar info")
-            print(err)
+            await interaction.client.log.embed(type=Log_Type.ERROR,module="(Insta) Info",message=f"Erro ao mostrar info do post:{err}")
 
     async def delete_callback(self, interaction: Interaction):
         insta: Insta = self.database.get_by_message_id(message_id=interaction.message.id)
@@ -122,4 +119,4 @@ class Post(View):
             self.database.delete(message_id=interaction.message.id)
             await interaction.message.delete()
         except Exception as err:
-            await log.insta_delete_error(interaction=interaction,err=err)
+            await interaction.client.log.embed(type=Log_Type.ERROR,module="(Insta) Deletar",message=f"Erro ao tentar deletar post:{err}")

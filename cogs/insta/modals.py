@@ -4,7 +4,7 @@ from discord.ui import View, Modal, TextInput
 from discord import Message
 
 from cogs.insta.sqls import Database as db
-from cogs import log
+from log import Log_Type
 from models.insta import Insta
 
 from myBot import MyBot
@@ -31,9 +31,8 @@ class Comment_Modal(Modal):
                                  user_id=interaction.user.id,
                                  comment=self.comment.value,)
         except Exception as err:
-            print(err)
             await interaction.response.send_message("Erro ao mandar comentário",ephemeral=True)
-            await log.insta_comment_error(interaction=interaction,comment='test',err=err)
+            await interaction.client.log.embed(type=Log_Type.ERROR,module="(Insta) Comentário",message=f"Erro ao tentar comentar:{err}")
             return
         
         comment = [child for child in self.view.children if child.custom_id=="btn_comment"][0]
