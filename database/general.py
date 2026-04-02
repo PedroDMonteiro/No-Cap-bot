@@ -1,4 +1,5 @@
 import os
+from typing import Sequence
 from utils.erros.database import *
 
 import mariadb
@@ -8,15 +9,15 @@ PASSWORD = os.getenv("DATABASE_PASSWORD")
 class Database():
     def __get_connection(self):
         return mariadb.connect(user="root",
-                                password=PASSWORD,
-                                host="localhost",
-                                port=3306,
-                                database=DATABASE,
-                                )
+                               password=PASSWORD,
+                               host="localhost",
+                               port=3306,
+                               database=DATABASE,
+                               )
 
-    def __execute(self, cursor: mariadb.cursors.Cursor, sql: str):
+    def __execute(self, cursor: mariadb.cursors.Cursor, sql: str, args: Sequence):
         try:
-            cursor.execute(sql)
+            cursor.execute(sql,args)
         except Exception as err:
             custom_err = err
             str_err = str(err).upper()
@@ -34,11 +35,11 @@ class Database():
         
             raise custom_err
 
-    def create(self, sql:str):
+    def create(self, sql:str, args: Sequence = ()):
         try:
             con = self.__get_connection()
             cur = con.cursor()
-            self.__execute(cur,sql)
+            self.__execute(cur,sql,args)
             con.commit()
             con.close()
         except Exception as err:
@@ -46,11 +47,11 @@ class Database():
             con.close()
             raise(err)
 
-    def select_one(self, sql:str):
+    def select_one(self, sql:str, args: Sequence = ()):
         try:
             con = self.__get_connection()
             cur = con.cursor()
-            self.__execute(cur,sql)
+            self.__execute(cur,sql,args)
             # con.commit()
             row = cur.fetchone()
             con.close()
@@ -61,11 +62,11 @@ class Database():
             con.close()
             raise(err)
 
-    def select_all(self, sql:str):
+    def select_all(self, sql:str, args: Sequence = ()):
         try:
             con = self.__get_connection()
             cur = con.cursor()
-            self.__execute(cur,sql)
+            self.__execute(cur,sql,args)
             # con.commit()
             rows = cur.fetchall()
             con.close()
@@ -75,11 +76,11 @@ class Database():
             con.close()
             raise(err)
 
-    def update(self, sql:str):
+    def update(self, sql:str, args: Sequence = ()):
         try:
             con = self.__get_connection()
             cur = con.cursor()
-            self.__execute(cur,sql)
+            self.__execute(cur,sql,args)
             con.commit()
             con.close()
         except Exception as err:
@@ -87,11 +88,11 @@ class Database():
             con.close()
             raise(err)
 
-    def delete(self, sql:str):
+    def delete(self, sql:str, args: Sequence = ()):
         try:
             con = self.__get_connection()
             cur = con.cursor()
-            self.__execute(cur,sql)
+            self.__execute(cur,sql,args)
             con.commit()
             con.close()
         except Exception as err:

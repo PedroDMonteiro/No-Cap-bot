@@ -66,7 +66,7 @@ class Cog_Debug(Cog, name= "Debug"):
 
     @commands.command()
     @checks.is_developer()
-    async def check_db(self, context: Context):
+    async def check_members(self, context: Context):
         users_db = [user.id for user in self.economy_database.get_all()]
         bots_db = []
         for member in context.guild.members:
@@ -83,3 +83,13 @@ class Cog_Debug(Cog, name= "Debug"):
                                message=f"Error no check de usuarios: {err}")
             return
         await context.send(f"Bots removidos")
+
+    @commands.command()
+    @checks.is_developer()
+    async def check_sql(self, context: Context):
+        sql = "select *"
+        sql += "\n"+f"FROM member"
+        sql += "\n"+f"WHERE username like ?"
+        rows = self.database.select_one(sql,[f"%pessimista%"])
+        
+        await context.send(f"{rows}")

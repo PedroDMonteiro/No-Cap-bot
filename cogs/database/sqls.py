@@ -7,12 +7,15 @@ async def setup(bot: MyBot):
 
 class Database(db):
     def table_exist(self, table: str) -> bool:
+        args = []
         query = ""
         query += "\n" + f"SELECT *"
         query += "\n" + f"FROM information_schema.tables"
         query += "\n" + f"WHERE table_schema = 'no cap'"
-        query += "\n" + f"AND TABLE_NAME = '{table}'"
-        rows = self.select_all(query)
+        query += "\n" + f"AND TABLE_NAME = ?"
+        args.append(table)
+
+        rows = self.select_all(query,args)
 
         return len(rows) > 0
     
@@ -20,12 +23,15 @@ class Database(db):
         if not self.table_exist(table):
             raise Table_Not_Found(table)
         
+        args = []
         query = ""
         query += "\n" + f"SELECT COLUMN_NAME"
         query += "\n" + f"FROM information_schema.columns"
         query += "\n" + f"WHERE table_schema = 'no cap'"
-        query += "\n" + f"AND TABLE_NAME = '{table}'"
-        rows = self.select_all(query)
+        query += "\n" + f"AND TABLE_NAME = ?"
+        args.append(table)
+        
+        rows = self.select_all(query,args)
 
         return [row[0] for row in rows]
     

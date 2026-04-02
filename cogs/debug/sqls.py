@@ -18,7 +18,6 @@ class Database(db):
             sql=""
             sql +="\n"+f"DELETE FROM member"
             sql +="\n"+f"WHERE id in ({",".join(map(str,to_delete))})"
-            print(sql)
             self.update(sql)
         except Exception as err:
             raise (err)

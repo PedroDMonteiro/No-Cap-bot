@@ -7,10 +7,13 @@ async def setup(bot: MyBot):
 class Database(db):
     def bumped(self, user_id:int):
         try:
+            args = []
             sql=""
             sql +="\n"+f"UPDATE member"
             sql +="\n"+f"SET coins = coins + 10"
-            sql +="\n"+f"WHERE id = '{user_id}'"
-            self.update(sql)
+            sql +="\n"+f"WHERE id = ?"
+            args.append(user_id)
+            
+            self.update(sql,args)
         except Exception as err:
             raise (err)

@@ -12,10 +12,14 @@ async def setup(bot: MyBot):
 class Database(db):
     def new_member(self, user:Member):
         try:
+            args = []
             sql=""
-            sql +="\n"+f"INSERT INTO member (id,username,coins)"
-            sql +="\n"+f"values ('{user.id}', '{user.name}',100)"
-            self.update(sql)
+            sql +="\n"+f"INSERT INTO member (id, username)"
+            sql +="\n"+f"values (?, ?)"
+            args.append(user.id)
+            args.append(user.name)
+
+            self.update(sql,args)
         except Exception as err:
             raise (err)
         
@@ -25,11 +29,14 @@ class Database(db):
         else:
             id = identifier.id
 
+        args = []
         sql=""
         sql +="\n"+f"SELECT username,xp,coins"
         sql +="\n"+f"FROM member"
-        sql +="\n"+f"WHERE id = '{id}'"
-        row = self.select_one(sql)
+        sql +="\n"+f"WHERE id = ?"
+        args.append(id)
+
+        row = self.select_one(sql,args)
 
         if row is None:
             raise User_Not_Found(identifier=identifier)
@@ -56,12 +63,16 @@ class Database(db):
             id = identifier
         else:
             id = identifier.id
-            
+
+        args = []
         sql=""
         sql +="\n"+f"UPDATE member"
-        sql +="\n"+f"SET coins = coins + {coins}"
-        sql +="\n"+f"WHERE id = '{id}'"
-        self.update(sql)
+        sql +="\n"+f"SET coins = coins + ?"
+        args.append(coins)
+        sql +="\n"+f"WHERE id = ?"
+        args.append(id)
+
+        self.update(sql,args)
 
         return self.get(identifier=identifier)
     
@@ -71,11 +82,15 @@ class Database(db):
         else:
             id = identifier.id
             
+        args = []
         sql=""
         sql +="\n"+f"UPDATE member"
-        sql +="\n"+f"SET coins = GREATEST(coins - {coins}, 0)"
-        sql +="\n"+f"WHERE id = '{id}'"
-        self.update(sql)
+        sql +="\n"+f"SET coins = GREATEST(coins - ?, 0)"
+        args.append(coins)
+        sql +="\n"+f"WHERE id = ?"
+        args.append(id)
+
+        self.update(sql,args)
 
         return self.get(identifier=identifier)
 
@@ -85,11 +100,15 @@ class Database(db):
         else:
             id = identifier.id
 
+        args = []
         sql=""
         sql +="\n"+f"UPDATE member"
-        sql +="\n"+f"SET coins = {coins}"
-        sql +="\n"+f"WHERE id = '{id}'"
-        self.update(sql)
+        sql +="\n"+f"SET coins = ?"
+        args.append(coins)
+        sql +="\n"+f"WHERE id = ?"
+        args.append(id)
+
+        self.update(sql,args)
 
         return self.get(identifier=identifier)
 
@@ -112,11 +131,15 @@ class Database(db):
         else:
             id = identifier.id
             
+        args = []
         sql=""
         sql +="\n"+f"UPDATE member"
-        sql +="\n"+f"SET xp = xp + {points}"
-        sql +="\n"+f"WHERE id = '{id}'"
-        self.update(sql)
+        sql +="\n"+f"SET xp = xp + ?"
+        args.append(points)
+        sql +="\n"+f"WHERE id = ?"
+        args.append(id)
+
+        self.update(sql,args)
 
         return self.get(identifier=identifier)
     
@@ -126,11 +149,15 @@ class Database(db):
         else:
             id = identifier.id
             
+        args = []
         sql=""
         sql +="\n"+f"UPDATE member"
-        sql +="\n"+f"SET xp = GREATEST(xp - {points}, 0)"
-        sql +="\n"+f"WHERE id = '{id}'"
-        self.update(sql)
+        sql +="\n"+f"SET xp = GREATEST(xp - ?, 0)"
+        args.append(points)
+        sql +="\n"+f"WHERE id = ?"
+        args.append(id)
+
+        self.update(sql,args)
 
         return self.get(identifier=identifier)
     
@@ -139,12 +166,16 @@ class Database(db):
             id = identifier
         else:
             id = identifier.id
-            
+        
+        args = []
         sql=""
         sql +="\n"+f"UPDATE member"
-        sql +="\n"+f"SET xp = {points}"
-        sql +="\n"+f"WHERE id = '{id}'"
-        self.update(sql)
+        sql +="\n"+f"SET xp = ?"
+        args.append(points)
+        sql +="\n"+f"WHERE id = ?"
+        args.append(id)
+
+        self.update(sql,args)
 
         return self.get(identifier=identifier)
 
@@ -160,4 +191,7 @@ class Database(db):
                     xp=int(row[2]),
                     coins=int(row[3]),)
                 for row in rows]
+            return 1.0
+
+        return float(row[0])
 
