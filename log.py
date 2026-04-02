@@ -5,7 +5,6 @@ from discord.ext.commands import Bot, GuildChannelConverter
 from discord import Embed, Enum, File, Interaction, Message, TextChannel, VoiceChannel
 # from discord.ext.commands import 
 
-from utils.configuration import INSTA_LOG_CHANNERL_ID
 class Embed_Colors(Enum):
     DEFAULT    = 0xbf0000 # darker red
     ERROR      = 0xff0000 # red
