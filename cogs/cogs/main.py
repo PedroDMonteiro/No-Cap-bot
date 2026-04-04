@@ -17,16 +17,11 @@ class Cog_Cogs(Cog, name = "Cogs"):
         self.bot = bot
 
     async def cog_load(self):
+        print(f"{self.__cog_name__} is up!")
         ...
 
-    @commands.Cog.listener()
-    async def on_ready(self):
-        print(f"{self.__cog_name__} is up!")
-        for cog_name in os.listdir("./cogs"):
-            if cog_name.count(".") == 0:
-                if cog_name != "__pycache__" and cog_name != "cogs":
-                    await self.load(cog_name)
-        print(f"{Terminal_Style.GREEN}All avaiable cogs loaded{Terminal_Style.RESET}")
+    async def cog_uload(self):
+        pass
 
     @commands.guild_only()
     @commands.group(name="cog",

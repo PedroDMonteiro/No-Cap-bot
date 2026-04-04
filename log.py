@@ -1,9 +1,8 @@
 import datetime
 
 from discord.abc import GuildChannel
-from discord.ext.commands import Bot, GuildChannelConverter
-from discord import Embed, Enum, File, Interaction, Message, TextChannel, VoiceChannel
-# from discord.ext.commands import 
+from discord.ext.commands import Bot
+from discord import Embed, Enum, File, Message
 
 class Embed_Colors(Enum):
     DEFAULT    = 0xbf0000 # darker red
@@ -34,7 +33,7 @@ class Log_Type(Enum):
 
 class Log():
 
-    def __init__(self, bot: Bot, 
+    def __init__(self,
                  default: int | GuildChannel = None,
                  error: int | GuildChannel = None,
                  moderation: int | GuildChannel = None,
@@ -54,6 +53,9 @@ class Log():
             "debug": debug,
         }
 
+    async def setup(self, bot: Bot):
+        default = self.channels.get("default")
+
         if default is None:
             for channel in self.channels.values():
                 if channel:
@@ -61,14 +63,14 @@ class Log():
                     break
 
         if default is None:
-            raise "Must Pass at least a default channel"
+            raise ValueError("Must pass at least a default channel")
 
         for key, channel in self.channels.items():
             if channel is None:
                 channel = default
 
-            if isinstance(channel,int):
-                channel = bot.get_channel(channel)
+            if isinstance(channel, int):
+                channel = await bot.fetch_channel(channel)
 
             self.channels[key] = channel
 
@@ -86,7 +88,7 @@ class Log():
 
         channel = self.channels[type.name.lower()]
         if channel is None:
-            raise Exception(f"{type.name}")
+            raise Exception(f"{type.name} does not have channel associated")
         
         msg = await self.channels[type.name.lower()].send(embed=embed,file=file)
 
