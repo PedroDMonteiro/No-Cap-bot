@@ -1,21 +1,19 @@
 import asyncio
 import datetime
 import random
-import types
 
 from discord import Member, Message, VoiceState
 
 from discord.ext import commands
 from discord.ext.commands.context import Context
-from discord.ext.commands import Cog
-
-import database.user as db
 
 from myBot import MyBot
 from cogs.economy.sqls import Database as db
 from log import Log_Type
+from utils import checks
 from utils.erros.database import User_Not_Found
 from utils.utils import Utils
+from utils.cog import Cog
 
 async def setup(bot: MyBot):
     await bot.add_cog(Cog_Economy(bot))
@@ -23,24 +21,23 @@ async def setup(bot: MyBot):
 def talking(voice: VoiceState) -> bool:
     if voice.channel is None:
         return False
-    
+
     if voice.mute:
         return False
-    
+
     if voice.self_mute:
         return False
-    
+
     if voice.deaf:
         return False
-    
+
     if voice.self_deaf:
         return False
-    
+
     return True
 
 class Cog_Economy(Cog, name = "Economy"):
-    def __init__(self, bot: MyBot):
-        self.bot = bot
+    async def cog_load(self):
         self.database = db()
         self.in_cooldown = set()
         self.chat_xp = [866894423164846110 , # chat geral
@@ -51,9 +48,22 @@ class Cog_Economy(Cog, name = "Economy"):
         self.call_xp = [859442274698264586]
         self.call_vips = [860330511787622400]
         self.talking = {}
+        self.bankers = [528555826047352833, # Kadode
+                        ]
+        
+        # level = xp//1000
+        self.level_roles ={1:875102723949854750,
+                           2:958761274739679313,
+                           5:879740517167009843,
+                           10:874365440288239636,
+                           40:878429588299067422,
+                           500:892115147798220840,
+                           }
+        
+        for level, role in self.level_roles.items():
+            self.level_roles[level] = await self.bot.guild.fetch_role(role)
 
-    async def cog_load(self):
-        print(f"{self.__cog_name__} is up")
+        await super().cog_load()
 
     @commands.Cog.listener()
     async def on_member_join(self, member: Member):
@@ -66,31 +76,38 @@ class Cog_Economy(Cog, name = "Economy"):
         if message.author.bot:
             return
         
+        if message.author.id in self.in_cooldown:
+            return
+        
         if message.channel.id not in self.chat_xp:
             return
         
-        if message.author.id in self.in_cooldown:
-            return
         
         member = message.author
         self.in_cooldown.add(member.id)
 
         xp = random.randint(1,15)
+        multiplier = self.database.get_xp_multiplier(member_id=member.id)
+        # self.bot.log.print(Log_Type.DEBUG,
+        #                    module=self.__cog_name__,
+        #                    message=f"{member}: {multiplier}")
+        xp = int(xp*multiplier//1)
         self.database.add_xp(identifier=member.id,points=xp)
         
         await asyncio.sleep(15)
         self.in_cooldown.remove(member.id)
 
-    async def add_talking_prizes(self, member_id: int):
+    async def add_talking_prizes(self, member_id: int, multiplier: float = 1.0):
         if member_id not in self.talking:
             return
-        
+
         now = int(datetime.datetime.now().timestamp()//1)
 
         seconds_talking = now - self.talking[member_id]
         # 15xp per 10 min
         xp = 15*(seconds_talking/(10*60))
-        xp = int(xp//1)
+        xp *= multiplier
+        xp = int(xp//1) 
         self.database.add_xp(identifier=member_id,points=xp)
 
         # 5 coins per hour
@@ -107,7 +124,7 @@ class Cog_Economy(Cog, name = "Economy"):
         if after.channel is None and before.channel is None:
             print("what??")
             return
-        
+
         if before.channel is not None and after.channel is not None:
             if before.channel == after.channel:
                 if talking(before) == talking(after):
@@ -115,19 +132,24 @@ class Cog_Economy(Cog, name = "Economy"):
                     return
 
         now = int(datetime.datetime.now().timestamp()//1)
-        
+
         if talking(before):
-            await self.add_talking_prizes(member_id=member.id)
-            
+            multiplier = 1
+            if before.channel.category_id in self.call_vips:
+                multiplier = 0.8
+
+            await self.add_talking_prizes(member_id=member.id, multiplier=multiplier)
+
             members_talking_before = [m for m in before.channel.members
                                       if (not m.bot) and talking(m.voice)]
             if len(members_talking_before) == 1:
-                await self.add_talking_prizes(member_id=members_talking_before[0].id)
+                await self.add_talking_prizes(member_id=members_talking_before[0].id,multiplier=multiplier)
 
         if talking(after):
-            if after.channel.category_id not in self.call_xp:
+            if after.channel.category_id not in self.call_xp+self.call_vips:
                 return
-            
+
+
             members_talking_after = [m for m in after.channel.members 
                                     if (not m.bot) and talking(m.voice)]
             if len(members_talking_after) >= 2:
@@ -137,8 +159,11 @@ class Cog_Economy(Cog, name = "Economy"):
                 other_id = members_talking_after[0].id
                 if other_id == member.id:
                     other_id = members_talking_after[1].id
-                    
+
                 self.talking[other_id] = now
+        
+        # self.check_level(member_id)
+        # 
 
     @commands.group(name="balance",
                     aliases=["bal","atm","saldo","coins","moedas","moeda"],
@@ -150,16 +175,19 @@ class Cog_Economy(Cog, name = "Economy"):
             user = self.database.get(identifier=member)
             await context.reply(f"{member.display_name} tem {user.coins} {"dobrão" if user.coins == 1 else "dobrões"}")
 
+    @checks.is_banker()
     @balance.command(name="add")
     async def balance_add(self, context: Context, member: Member | int, coins: int):
         user = self.database.add_coins(identifier=member,coins=coins)
         await context.reply(f"`{user.username}` agora tem {user.coins} {"dobrão" if user.coins == 1 else "dobrões"}")
 
+    @checks.is_banker()
     @balance.command(name="remove")
     async def balance_remove(self, context: Context, member: Member | int, coins: int):
         user = self.database.remove_coins(identifier=member,coins=coins)
         await context.reply(f"`{user.username}` agora tem {user.coins} {"dobrão" if user.coins == 1 else "dobrões"}")
 
+    @checks.is_banker()
     @balance.command(name="edit")
     async def balance_edit(self, context: Context, member: Member | int, coins: int):
         user = self.database.set_coins(identifier=member,coins=coins)
@@ -221,3 +249,12 @@ class Cog_Economy(Cog, name = "Economy"):
                 self.database.new_member(member)
             else:
                 raise(err)
+            
+    def check_level(self, member: Member):
+        try:
+            self.database.get_level(member.id)
+
+
+            ...
+        except:
+            ...

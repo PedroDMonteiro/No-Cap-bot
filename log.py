@@ -31,6 +31,9 @@ class Log_Type(Enum):
     MEMBER = 5
     DEBUG = 6
 
+    def __str__(self):
+        return f"{Terminal_Colors[self.name].value}{self.name}{Terminal_Colors.RESET.value}"
+
 class Log():
 
     def __init__(self,
@@ -74,9 +77,9 @@ class Log():
 
             self.channels[key] = channel
 
-    def print(self, type: Log_Type, module: str, message: str):
+    def print(self, type: Log_Type, message: str):
         time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print(f"{Terminal_Colors[type.name].value}{time} {module}: {message}{Terminal_Colors.RESET.value}")
+        print(f"{time} {type} {message}")
 
     async def embed(self, type: Log_Type, module: str, message:str, file: File= None) -> Message:
         embed = Embed(title=module,
@@ -93,6 +96,7 @@ class Log():
         msg = await self.channels[type.name.lower()].send(embed=embed,file=file)
 
         if type in [Log_Type.ERROR,Log_Type.DEBUG]:
-            self.print(type=type,module=module,message=message)
+            self.print(type,
+                       f"{module}: {message}")
 
         return msg

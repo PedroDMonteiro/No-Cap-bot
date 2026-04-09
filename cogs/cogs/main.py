@@ -23,6 +23,7 @@ class Cog_Cogs(Cog, name = "Cogs"):
     async def cog_uload(self):
         pass
 
+class Cog_Cog_Maneger(Cog, name = "Cog_Maneger"):
     @commands.guild_only()
     @commands.group(name="cog",
                     aliases=["cogs"],
@@ -49,18 +50,18 @@ class Cog_Cogs(Cog, name = "Cogs"):
             try:
                 if filename.endswith(".py"):
                     await self.bot.load_extension(f"cogs.{cog_name}.{filename[:-3]}")
-                    print(f"{cog_name}.{filename[:-3]} loaded{Terminal_Style.RESET}")
+                    self.bot.log.print(Log_Type.DEBUG,
+                                       f"{cog_name}.{filename[:-3]} loaded")
             except Exception as err:
                 await self.bot.log.embed(type=Log_Type.ERROR,module="Cog Loader",message=f"Error to load {cog_name}: {err}")
                 await self.unload(cog_name)
                 return
         try:
             self.bot.loaded_cogs.add(cog_name)
-            self.bot.log.print(type=Log_Type.DEBUG,module="Cog Loader",message=f"{cog_name} loaded")
-            print(f'{Terminal_Style.GREEN}Cog {cog_name} loaded{Terminal_Style.RESET}')
+            self.bot.log.print(Log_Type.DEBUG,
+                               f"{cog_name} loaded")
         except Exception as err:
             await self.bot.log.embed(type=Log_Type.ERROR,module="Loader",message=f"Error to load {cog_name}: {err}")
-            print(f'{Terminal_Style.RED}Error to load {cog_name}: {err}{Terminal_Style.RESET}')
             await self.unload(cog_name)
 
     @cogs.command(name="unload",
@@ -85,16 +86,18 @@ class Cog_Cogs(Cog, name = "Cogs"):
                 try:
                     if filename.endswith(".py"):
                         await self.bot.unload_extension(f"cogs.{cog_name}.{filename[:-3]}")
-                        print(f'{cog_name}.{filename[:-3]} unloaded{Terminal_Style.RESET}')
-                except Exception as e:
-                    print(f'{Terminal_Style.RED}Error to unload {cog_name}: {e}{Terminal_Style.RESET}')
+                        self.bot.log.print(Log_Type.DEBUG,
+                                           f"{cog_name}.{filename[:-3]} unloaded")
+                except Exception as err:
+                    await self.bot.log.embed(type=Log_Type.ERROR,module="Loader",message=f"Error to unload {cog_name}: {err}")
         except:
             ...
         try:
             self.bot.loaded_cogs.remove(cog_name)
         except:
             ...
-        print(f'{Terminal_Style.GREEN}Cog {cog_name} unloaded{Terminal_Style.RESET}')
+        self.bot.log.print(Log_Type.DEBUG,
+                           f"{cog_name} unloaded")
 
     @cogs.command(name="reload",
                   aliases=["r"])

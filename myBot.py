@@ -21,6 +21,11 @@ class MyBot(commands.Bot):
         self.loaded_cogs = set()
         self.token = os.getenv("TOKEN")
         self.add_check(self.check)
+        self.cog_count = 0
+
+        self.devs = [650831130924417024, #PCM
+                     955209730639409254, #Tamanta
+                     ]
 
     async def check(self, context: commands.Context):
         if context.guild:
@@ -41,7 +46,8 @@ class MyBot(commands.Bot):
         await self.process_commands(after)
 
     async def on_ready(self):
-        print(f"Bot conectado como {self.user}")
+        self.log.print(Log_Type.DEBUG,
+                       f"Bot conectado como {self.user}")
 
     async def setup_hook(self):
         self.guild = await self.fetch_guild(self.guild_id)
@@ -55,9 +61,8 @@ class MyBot(commands.Bot):
         
         await self.load_initial_cogs()
 
-        self.log.print(type=Log_Type.DEBUG,
-                       module="setup_hook",
-                       message="Setup finalizado")
+        self.log.print(Log_Type.DEBUG,
+                       "Setup finalizado")
 
     async def load_initial_cogs(self, ):
         for cog_name in os.listdir("./cogs"):
@@ -74,20 +79,18 @@ class MyBot(commands.Bot):
             try:
                 if filename.endswith(".py"):
                     await self.load_extension(f"cogs.{cog_name}.{filename[:-3]}")
-                    self.log.print(type=Log_Type.DEBUG,
-                                   module="Cog loader",
-                                   message=f'{cog_name}.{filename[:-3]} loaded')
+                    self.log.print(Log_Type.DEBUG,
+                                   f'{cog_name}.{filename[:-3]} loaded')
             except Exception as err:
                 await self.log.embed(type=Log_Type.ERROR,
-                                         module="Cog Loader",
-                                         message=f"Error to load {cog_name}: {err}")
+                                     module="Cog Loader",
+                                     message=f"Error to load {cog_name}: {err}")
                 await self.unload_cog(cog_name)
                 return
         try:
             self.loaded_cogs.add(cog_name)
-            self.log.print(type=Log_Type.DEBUG,
-                               module="Cog Loader",
-                               message=f"{cog_name} loaded")
+            self.log.print(Log_Type.DEBUG,
+                           f"{cog_name} loaded")
         except Exception as err:
             await self.log.embed(type=Log_Type.ERROR,
                                      module="Cog Loader",
@@ -100,13 +103,12 @@ class MyBot(commands.Bot):
                 try:
                     if filename.endswith(".py"):
                         await self.unload_extension(f"cogs.{cog_name}.{filename[:-3]}")
-                        self.log.print(type=Log_Type.DEBUG,
-                                       module="Cog loader",
-                                       message=f'{cog_name}.{filename[:-3]} unloaded')
-                except Exception as e:
-                    self.log.embed(type=Log_Type.ERROR,
-                                   module="Cog loader",
-                                   message=f"Error to unload cogs.{cog_name}.{filename[:-3]}: {e}")
+                        self.log.print(Log_Type.DEBUG,
+                                       f'{cog_name}.{filename[:-3]} unloaded')
+                except Exception as err:
+                    await self.log.embed(type=Log_Type.ERROR,
+                                         module="Cog loader",
+                                         message=f"Error to unload cogs.{cog_name}.{filename[:-3]}: {err}")
         except:
             ...
         try:
@@ -114,6 +116,6 @@ class MyBot(commands.Bot):
         except:
             ...
 
-        self.log.embed(type=Log_Type.DEBUG,
-                       module="Cog loader",
-                       message=f"Cog {cog_name} unloaded: {e}")
+        await self.log.embed(type=Log_Type.DEBUG,
+                             module="Cog loader",
+                             message=f"Cog {cog_name} unloaded")
