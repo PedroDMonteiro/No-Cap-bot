@@ -9,7 +9,7 @@ from cogs.insta.modals import Comment_Modal
 
 from models.insta import Insta
 
-from utils.my_views import Ok_Cancelar_View
+from utils.view import Ok_Cancelar_View
 
 from myBot import MyBot
 

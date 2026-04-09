@@ -1,24 +1,21 @@
 from discord.ext import commands
 from discord.ext.commands.context import Context
-from discord.ext.commands import Bot,Cog
+
 
 from log import Log_Type
 from myBot import MyBot
 from cogs.database.sqls import Database as db
 from utils import checks
 from utils.erros.database import Table_Not_Found
+from utils.cog import Cog
 
-async def setup(bot: Bot):
+async def setup(bot: MyBot):
     await bot.add_cog(Cog_Database(bot))
 
 class Cog_Database(Cog, name= "Database"):
-    def __init__(self, bot: MyBot):
-        self.bot = bot
-        self.msg_count = 0
-        self.database = db()
-
     async def cog_load(self):
-        print(f"{self.__cog_name__} is up")
+        self.database = db()
+        await super().cog_load()
 
     @commands.command(name="sql")
     @checks.is_developer()

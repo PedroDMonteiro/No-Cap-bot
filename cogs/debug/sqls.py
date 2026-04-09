@@ -1,8 +1,4 @@
-from discord import Member, User
-
 from database.general import Database as db
-from utils.erros.database import User_Not_Found
-from models.user import User as md_User
 
 from myBot import MyBot
 

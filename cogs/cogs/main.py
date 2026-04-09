@@ -2,26 +2,14 @@ import os
 
 from discord.ext import commands
 from discord.ext.commands.context import Context
-from discord.ext.commands import Cog
 
 from log import Log_Type
 from utils import checks
 from myBot import MyBot
-from utils.configuration import Terminal_Style
+from utils.cog import Cog
 
 async def setup(bot: MyBot):
-    await bot.add_cog(Cog_Cogs(bot))
-
-class Cog_Cogs(Cog, name = "Cogs"):
-    def __init__(self, bot: MyBot):
-        self.bot = bot
-
-    async def cog_load(self):
-        print(f"{self.__cog_name__} is up!")
-        ...
-
-    async def cog_uload(self):
-        pass
+    await bot.add_cog(Cog_Cog_Maneger(bot))
 
 class Cog_Cog_Maneger(Cog, name = "Cog_Maneger"):
     @commands.guild_only()

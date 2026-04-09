@@ -2,20 +2,16 @@ from io import BytesIO
 
 from discord.ext import commands
 from discord.ext.commands.context import Context
-from discord.ext.commands import Cog
 
 from discord import DMChannel, Embed, Emoji, File, Member, Message, Role
 
-from utils import checks
 from myBot import MyBot
+from utils.cog import Cog
 
 async def setup(bot: MyBot):
     await bot.add_cog(Cog_Configuration(bot))
 
 class Cog_Configuration(Cog, name = "Configuration"):
-    def __init__(self, bot: MyBot):
-        self.bot = bot
-
     @commands.Cog.listener()
     async def on_member_join(self, member: Member):
         member.joined_at
@@ -27,11 +23,7 @@ class Cog_Configuration(Cog, name = "Configuration"):
                 if message.content == f'<@{self.bot.user.id}>':
                     await message.channel.send(f"## Meu prefixo é `nc!`\n-# Use `nc!help` para mais informações")
                     return 
-                
-    @commands.Cog.listener()
-    async def on_ready(self):
-        print(f"{self.__cog_name__} is up")
-        
+
     @commands.group(name="role",aliases=[],invoke_without_command=True)
     async def role(self, context: Context, role: Role):
         embed = Embed(title=role.name,description=role.mention)

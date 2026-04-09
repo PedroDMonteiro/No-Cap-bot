@@ -1,20 +1,6 @@
-SERVER_TEST_ID = 1347349188152791102
-
-DEVS = [650831130924417024, #PCM
-        955209730639409254, #Tamanta
-        ]
-
-CHAT_GERAL_ID = 866894423164846110
-
 EMOJIS = {
     'heart':1412875866039521410,
     'chat':1416517138457432187,
     'trash':1412876222039588996,
     'insta':1419362076438040768,
     }
-
-class Terminal_Style:
-    RED = "\033[31m"
-    GREEN = "\033[32m"
-    CYAN = "\033[36m"
-    RESET = "\033[0m" # Resets the color/style

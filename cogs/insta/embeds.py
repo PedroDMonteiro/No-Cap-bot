@@ -1,10 +1,6 @@
-from discord import Embed, File, Member, User
-
-from database.general import Database as db
-from models.insta_rank import Insta_Rank
+from discord import Embed, File, Member
 from utils.configuration import EMOJIS
-from utils.erros.database import User_Not_Found
-from models.user import User as md_User
+
 
 from myBot import MyBot
 from utils.utils import Utils

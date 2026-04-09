@@ -1,9 +1,9 @@
 import discord
 from discord import Interaction, Message
-from discord.ui import View, Button
+from discord.ui import View as View_dc, Button
 from discord.interactions import InteractionCallbackResponse
 
-class My_View(View):
+class View(View_dc):
     def __init__(self, timeout: float = 20):
         super().__init__(timeout=timeout)
         self.interaction_users_ids: list[int]
@@ -34,19 +34,19 @@ class My_View(View):
         if self.in_background:
             self.stop()
 
-class Message_on_Timeout_View(My_View):
+class Message_on_Timeout_View(View):
     def __init__(self, timeout: float | None = 20):
         super().__init__(timeout=timeout)
 
-    @My_View.in_front
+    @View.in_front
     async def on_timeout(self) -> None:
         self.stop()
 
-class My_Button(My_View):
+class My_Button(View):
     def __init__(self):
         super().__init__()
 
-    @My_View.in_front
+    @View.in_front
     async def on_timeout(self) -> None:
         for item in self.children:
             if type(item) == Button:
@@ -54,7 +54,7 @@ class My_Button(My_View):
         await self.message.edit(view=self)
         self.stop()
 
-    @My_View.can_interact
+    @View.can_interact
     async def update_message(self, interaction:Interaction):
         pass
 
@@ -74,13 +74,13 @@ class Ok_Cancelar_Buttons(My_Button,Message_on_Timeout_View):
         cancel.callback = self.on_cancel
         self.add_item(cancel)
 
-    @My_View.can_interact
+    @View.can_interact
     async def on_confirm(self, interaction: Interaction):
         await self.message.edit(content=f"{self.message.content}\nConfirmado",view=None)
         self.confirmed = True
         self.stop()
 
-    @My_View.can_interact
+    @View.can_interact
     async def on_cancel(self, interaction: Interaction):
         await self.message.edit(content=f"{self.message.content}\nCancelado",view=None)
         self.stop()

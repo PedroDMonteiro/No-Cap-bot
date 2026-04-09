@@ -2,19 +2,17 @@ from discord import Message
 
 import discord
 from discord.ext import commands
-from discord.ext.commands import Bot,Cog
 
 from myBot import MyBot
+from utils.cog import Cog
 
-async def setup(bot: Bot):
+async def setup(bot: MyBot):
     await bot.add_cog(Cog_Secret(bot))
 
 class Cog_Secret(Cog, name = "Secret"):
-    def __init__(self, bot: MyBot):
-        self.bot = bot
-
     async def cog_load(self):
         self.channel = await self.bot.fetch_channel(1356712387163586801)
+        await super().cog_load()
 
     @commands.Cog.listener()
     async def on_message(self, message: Message):

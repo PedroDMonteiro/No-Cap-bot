@@ -3,23 +3,20 @@ import random
 import discord
 from discord.ext import commands
 from discord.ext.commands.context import Context
-from discord.ext.commands import Bot,Cog
-from utils.configuration import CHAT_GERAL_ID
 from discord import File, Member,Message
 
 from myBot import MyBot
+from utils.cog import Cog
 
-async def setup(bot: Bot):
+CHAT_GERAL_ID = 866894423164846110
+
+async def setup(bot: MyBot):
     await bot.add_cog(Cog_NoCap(bot))
 
 class Cog_NoCap(Cog, name= "NoCap"):
-    def __init__(self, bot: MyBot):
-        self.bot = bot
-        # self.database = db()
-        self.msg_count = 0
-
     async def cog_load(self):
-        print(f"{self.__cog_name__} is up")
+        self.msg_count = 0
+        await super().cog_load()
 
     @commands.Cog.listener()
     async def on_message(self, message: Message):

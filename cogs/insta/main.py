@@ -5,7 +5,6 @@ import os
 import requests
 
 from discord.ext import commands,tasks
-from discord.ext.commands import Cog
 from discord.ext.commands.context import Context
 
 from discord import Embed, File, Message
@@ -16,6 +15,7 @@ from myBot import MyBot
 from models.insta_rank import Insta_Rank
 from utils import checks
 from utils.configuration import EMOJIS
+from utils.cog import Cog
 
 from cogs.insta.sqls import Database as db
 from cogs.insta.embeds import Embeds
@@ -31,17 +31,15 @@ class Cog_Insta(Cog, name = "Insta"):
     CHANNEL_ID = 1135931353720963072
     ROLE = 893650528981098558
 
-    def __init__(self, bot: MyBot):
-        self.bot = bot
-        self.database = db()
-
     async def cog_load(self):
+        self.database = db()
         # Registrar a view persistente
         self.bot.add_view(Post())
         self.channel = await self.bot.fetch_channel(Cog_Insta.CHANNEL_ID)
         self.emoji_insta = await self.bot.fetch_application_emoji(EMOJIS['insta'])
         self.insta_loop.start()
-        print(f"{self.__cog_name__} is up")
+        
+        await super().cog_load()
     
     async def get_winner(self) -> Insta_Rank:
         guild = self.bot.get_guild(self.bot.guild_id)

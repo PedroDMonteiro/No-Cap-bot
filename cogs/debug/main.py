@@ -3,27 +3,24 @@ import datetime
 from discord import Embed, File, Member, Message, VoiceState
 from discord.ext import commands
 from discord.ext.commands.context import Context
-from discord.ext.commands import Bot,Cog
 
 from log import Log_Type
 from myBot import MyBot
+from utils.cog import Cog
 from utils import checks
 from utils import utils
 
 from cogs.economy.sqls import Database as economy_db
-from cogs.debug.sqls import Database as     db
+from cogs.debug.sqls import Database as db
 
-async def setup(bot: Bot):
+async def setup(bot: MyBot):
     await bot.add_cog(Cog_Debug(bot))
 
 class Cog_Debug(Cog, name= "Debug"):
-    def __init__(self, bot: MyBot):
-        self.bot = bot
-
     async def cog_load(self):
         self.economy_database = economy_db()
         self.database = db()
-        print(f"{self.__cog_name__} is up")
+        await super().cog_load()
 
     @commands.command(name="debug")
     @checks.is_developer()
