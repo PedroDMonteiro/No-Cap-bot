@@ -34,7 +34,7 @@ class Cog_Database(Cog, name= "Database"):
                 self.database.update(query)
         except Exception as err:
             await self.bot.log.embed(type=Log_Type.ERROR,
-                                     module=self.__cog_name__,
+                                     module=self,
                                      message=f"Erro na query `{query}`:\n{err}")
             return
 

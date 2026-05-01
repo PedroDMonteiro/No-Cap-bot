@@ -116,7 +116,7 @@ class Cog_Economy(Cog, name = "Economy"):
         self.talking.pop(member_id, 0)
 
         await self.bot.log.embed(type=Log_Type.CALL,
-                                 module=f"{self.__cog_name__} (Call)",
+                                 module=f"{self} (Call)",
                                  message=f"<@{member_id}>\n-# {Utils.format_seconds(seconds_talking)}\n\n+ {xp} xp\n+ {coins} moedas")
 
     @commands.Cog.listener()

@@ -11,10 +11,12 @@ class MyBot(commands.Bot):
                  adm_roles:list[int] = [],
                  commands_channels:list[int] = [],
                  ):
+        
         load_dotenv(dotenv_path='./config.env')
         super().__init__(command_prefix=commands.when_mentioned_or("nc!"),
                          case_insensitive=True,
                          intents=discord.Intents.all(),)
+        
         self.guild_id = guild
         self.adm_roles = adm_roles
         self.commands_channels = commands_channels
