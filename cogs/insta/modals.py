@@ -5,7 +5,7 @@ from discord import Message
 
 from cogs.insta.sqls import Database as db
 from log import Log_Type
-from models.insta import Insta
+from cogs.insta.models.insta import Insta
 
 from myBot import MyBot
 async def setup(bot: MyBot):
@@ -45,10 +45,3 @@ class Comment_Modal(Modal):
         await interaction.response.send_message("Comentário enviado",ephemeral=True)
 
         await self.message.edit(content=self.message.content,view=self.view)
-
-    
-    async def on_timeout(self):
-        return await super().on_timeout()
-
-    async def on_error(self, interaction, error):
-        return await super().on_error(interaction, error)

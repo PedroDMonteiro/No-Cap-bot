@@ -1,6 +1,5 @@
 from database.general import Database as db
-from models.insta import Insta, Comment
-from models.insta_rank import Insta_Rank
+from cogs.insta.models.insta import Insta, Comment
 from utils.erros.database import *
 
 from myBot import MyBot
@@ -9,15 +8,16 @@ async def setup(bot: MyBot):
     pass
 
 class Database(db):
-    def add_insta(self, message_id:int, user_id:int):
+    def add_post(self, message_id:int, user_id:int, extension: str):
         try:
             args = []
             sql=""
             sql +="\n"+f"INSERT INTO INSTA"
-            sql +="\n"+f"(message_id,user_id) VALUES"
-            sql +="\n"+f"(?,?)"
+            sql +="\n"+f"(message_id,user_id,extension) VALUES"
+            sql +="\n"+f"(?,?,?)"
             args.append(message_id)
             args.append(user_id)
+            args.append(extension)
 
             self.update(sql,args)
         except Exception as err:
@@ -41,19 +41,9 @@ class Database(db):
             print(type(err))
             raise err
         
-        args = []
-        sql=""
-        sql +="\n"+f"SELECT count(*)"
-        sql +="\n"+f"FROM insta_like"
-        sql +="\n"+f"WHERE message_id = ?"
-        sql +="\n"+f"GROUP BY message_id"
-        args.append(message_id)
+        return len(self.get_likes(message_id=message_id))
 
-        row = self.select_one(sql,args)
-
-        return int(row[0])
-
-    def add_comment(self, message_id:int, user_id: int, comment: str):
+    def add_comment(self, message_id:int, user_id: int, comment: str) -> int:
         max_len_comment = 30
         if len(comment) > max_len_comment:
             raise Exception(f"Máximo de {max_len_comment} caracteres")
@@ -73,41 +63,48 @@ class Database(db):
             raise Exception("Você já comentou")
         except Exception as err:
             raise(err)
-        
-        args = []
-        sql=""
-        sql +="\n"+f"SELECT count(*)"
-        sql +="\n"+f"FROM insta_comment"
-        sql +="\n"+f"WHERE message_id = ?"
-        args.append(message_id)
-        sql +="\n"+f"GROUP BY message_id"
 
-        row = self.select_one(sql,args)
-
-        return int(row[0])
+        return len(self.get_comments(message_id=message_id))
         
-    def get_all_messages_id(self, ) -> list[int]:
+    def get_all(self, ) -> list[Insta]:
         sql = ""
-        sql += "\n"+f"SELECT message_id"
+        sql += "\n"+f"SELECT message_id,user_id,extension"
         sql += "\n"+f"FROM insta"
-
-        return [int(row[0]) for row in self.select_all(sql)]
+        posts: list[Insta] = []
+        
+        for row in self.select_all(sql):
+            message_id = int(row[0])
+            posts.append(Insta(message_id=message_id,
+                               user_id=int(row[1]),
+                               extension=row[2],
+                               likes=self.get_likes(message_id),
+                               comments=self.get_comments(message_id)))
+            
+        return posts
 
     def get_by_message_id(self, message_id: int) -> Insta:
         args = []
         sql = ""
-        sql += "\n"+f"SELECT user_id"
-        sql += "\n"+f"FROM insta "
+        sql += "\n"+f"SELECT user_id,extension"
+        sql += "\n"+f"FROM insta"
         sql += "\n"+f"WHERE message_id = ?"
         args.append(message_id)
 
-        user_id = int(self.select_one(sql,args)[0])
+        row = self.select_one(sql,args)
+        if row is None:
+            return None
 
+        return Insta(user_id=int(row[0]),
+                     message_id=message_id,
+                     extension=row[1],
+                     likes=self.get_likes(message_id),
+                     comments=self.get_comments(message_id))
+
+    def get_likes(self, message_id: int) -> list[Comment]:
         args = []
         sql = ""
         sql += "\n"+f"SELECT il.user_id"
         sql += "\n"+f"FROM insta_like il"
-        sql += "\n"+f"JOIN insta i on i.message_id = il.message_id"
         sql += "\n"+f"WHERE il.message_id = ?"
         args.append(message_id)
 
@@ -115,6 +112,9 @@ class Database(db):
         for row in self.select_all(sql,args):
             likes.append(int(row[0]))
 
+        return likes
+
+    def get_comments(self, message_id: int) -> list[Comment]:
         args = []
         sql = ""
         sql += "\n"+f"SELECT user_id"
@@ -127,85 +127,47 @@ class Database(db):
         for row in self.select_all(sql,args):
             comments.append(Comment(user_id=int(row[0]),
                                     content=row[1]))
+            
+        return comments
 
-        return Insta(user_id=user_id,
-                    message_id=message_id,
-                    likes=likes,
-                    comments=comments)
-
-
-    def delete(self, message_id: int):
+    def delete(self, message_id: int = None) -> None:
         args = []
         sql = ""
         sql += "\n"+f"DELETE FROM insta_like"
-        sql += "\n"+f"WHERE message_id = ?"
-        args.append(message_id)
+        if message_id:
+            sql += "\n"+f"WHERE message_id = ?"
+            args.append(message_id)
 
         self.update(sql,args)
 
         args = []
         sql = ""
         sql += "\n"+f"DELETE FROM insta_comment"
-        sql += "\n"+f"WHERE message_id = ?"
-        args.append(message_id)
+        if message_id:
+            sql += "\n"+f"WHERE message_id = ?"
+            args.append(message_id)
 
         self.update(sql,args)
 
         args = []
         sql = ""
         sql += "\n"+f"DELETE FROM insta"
-        sql += "\n"+f"WHERE message_id = ?"
-        args.append(message_id)
+        if message_id:
+            sql += "\n"+f"WHERE message_id = ?"
+            args.append(message_id)
 
         self.update(sql,args)
 
-    def clear(self, ):
+    def clear(self, ) -> None:
+        self.delete()
+
+    def get_ordered_rank(self, ) -> list[Insta]:
         sql = ""
-        sql += "DELETE FROM insta_like"
-        self.update(sql)
-
-        sql = ""
-        sql += "DELETE FROM insta_comment"
-        self.update(sql)
-
-        sql = ""
-        sql += "DELETE FROM insta"
-        self.update(sql)
-
-    def get_candidates_to_win(self, )-> list[int]:
-        sql = ""
-        sql += "\n"+f"SELECT likes, comments"
-        sql += "\n"+f"FROM view_insta_rank "
-        sql += "\n"+f"WHERE rank = 1"
-        
-        row = self.select_one(sql)
-        
-        if row is None:
-            return []
-        
-        winner_likes = int(row[0])
-        winner_comments = int(row[1])
-
-        args = []
-        sql = ""
-        sql += "\n"+f"SELECT message_id"
-        sql += "\n"+f"FROM view_insta_rank"
-        sql += "\n"+f"WHERE likes = ?"
-        args.append(winner_likes)
-        sql += "\n"+f"AND comments = ?"
-        args.append(winner_comments)
-
-        rows = self.select_all(sql,args)
-
-        return [int(row[0]) for row in rows]
-
-    def get_ordered_rank(self, ) -> list[Insta_Rank]:
-        sql = ""
-        sql += "\n"+f"SELECT user_id,message_id,rank,likes,comments"
+        sql += "\n"+f"SELECT user_id,message_id,rank,likes,comments,extension"
         sql += "\n"+f"FROM view_insta_rank "
         rows = self.select_all(sql)
 
-        return [Insta_Rank(user_id=int(row[0]),
+        return [Insta(user_id=int(row[0]),
                         message_id=int(row[1]),
                         rank=int(row[2]),
                         num_likes=int(row[3]),

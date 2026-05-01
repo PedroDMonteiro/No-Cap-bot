@@ -7,7 +7,7 @@ from utils.erros.database import Primary_Key_Duplicate
 from cogs.insta.sqls import Database as db
 from cogs.insta.modals import Comment_Modal
 
-from models.insta import Insta
+from cogs.insta.models.insta import Insta
 
 from utils.view import Ok_Cancelar_View
 
@@ -64,19 +64,17 @@ class Post(View):
             await interaction.response.edit_message(content=interaction.message.content,view=self)
 
         except Primary_Key_Duplicate as err:
-            await interaction.response.send_message('Você já votou',ephemeral=True)
+            await interaction.response.send_message("Você já votou",ephemeral=True)
         except Exception as err:
-            print(type(err))
-            await interaction.response.send_message("Erro ao dar like",ephemeral=True)
-            await interaction.client.log.embed(type=Log_Type.ERROR,module="(Insta) Like",message=f"Erro ao tentar comentar:{err}")
+            await interaction.response.send_message("Erro ao dar like, tente novamente",ephemeral=True)
+            await interaction.client.log.embed(type=Log_Type.ERROR,module="(Insta) Like",message=f"Erro ao tentar comentar:\n{err}")
 
     async def comment_callback(self, interaction: Interaction):
         try:
             await interaction.response.send_modal(Comment_Modal(message=interaction.message,view=self))
-            #log new comment
         except Exception as err:
-            await interaction.response.send_message("Erro ao mandar comentário",ephemeral=True)
-            await interaction.client.log.embed(type=Log_Type.ERROR,module="(Insta) Comentário",message=f"Erro ao tentar comentar:{err}")
+            await interaction.response.send_message("Erro ao mandar comentário, tente novamente",ephemeral=True)
+            await interaction.client.log.embed(type=Log_Type.ERROR,module="(Insta) Comentário",message=f"Erro ao tentar comentar:\n{err}")
 
 
     async def info_callback(self, interaction: Interaction):
@@ -84,31 +82,30 @@ class Post(View):
             insta: Insta = self.database.get_by_message_id(message_id=interaction.message.id)
 
             likes_text = f'{Post.like_emoji} **Likes**\n'
-            if len(insta.likes) == 0:
-                likes_text += 'Sem likes ainda'
+            if insta.num_likes() == 0:
+                likes_text += '0 likes'
             else:
                 likes_text += '\n'.join([f'<@{user_id}>' for user_id in insta.likes])
 
             comments_text = f'{Post.comment_emoji} **Comentários**:\n'
-            if len(insta.comments) == 0:
-                comments_text += 'Sem comentários ainda'
+            if insta.num_comments() == 0:
+                comments_text += '0 comentários'
             else:
                 comments_text += '\n'.join([f'<@{comment.user_id}>: {comment.content}' for comment in insta.comments])
 
             await interaction.response.send_message(likes_text+'\n'+comments_text,ephemeral=True)
         except Exception as err:
-            await interaction.client.log.embed(type=Log_Type.ERROR,module="(Insta) Info",message=f"Erro ao mostrar info do post:{err}")
+            await interaction.response.send_message("Erro ao pegar informações, tente novamente",ephemeral=True)
+            await interaction.client.log.embed(type=Log_Type.ERROR,module="(Insta) Info",message=f"Erro ao mostrar info do post:\n{err}")
 
     async def delete_callback(self, interaction: Interaction):
-        insta: Insta = self.database.get_by_message_id(message_id=interaction.message.id)
-        if interaction.user.id != insta.user_id:
-            if not interaction.user.guild_permissions.administrator:
-                # await interaction.message.reply("Você não tem permissão para apagar esta messagem",ephemeral=True)
-                await interaction.response.send_message("Você não tem permissão para deletar esta messagem",ephemeral=True)
-                return
         try:
+            insta: Insta = self.database.get_by_message_id(message_id=interaction.message.id)
+            if interaction.user.id != insta.user_id:
+                if not interaction.user.guild_permissions.administrator:
+                    await interaction.response.send_message("Você não tem permissão para deletar esta messagem",ephemeral=True)
+                    return
             view = Ok_Cancelar_View(interaction_user_id=interaction.user.id)
-            # view.message = await interaction.response.send_message("Tem certeza que deseja deletar esta foto?\n-# Isso é irreversível",view=view,ephemeral=True)
             await interaction.response.send_message("Tem certeza que deseja deletar esta foto?\n-# Isso é irreversível",view=view,ephemeral=True)
             view.message = await interaction.original_response()
             
@@ -119,4 +116,5 @@ class Post(View):
             self.database.delete(message_id=interaction.message.id)
             await interaction.message.delete()
         except Exception as err:
-            await interaction.client.log.embed(type=Log_Type.ERROR,module="(Insta) Deletar",message=f"Erro ao tentar deletar post:{err}")
+            await interaction.response.send_message("Erro ao deletar post, tente novamente",ephemeral=True)
+            await interaction.client.log.embed(type=Log_Type.ERROR,module="(Insta) Deletar",message=f"Erro ao tentar deletar post:\n{err}")

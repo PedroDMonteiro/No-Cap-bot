@@ -21,7 +21,7 @@ class Cog_Bump(Cog, name = "Bump"):
         self.reminder.start()
         await super().cog_load()
 
-    @tasks.loop(hours=1)
+    @tasks.loop(hours=1,name="Reminder")
     async def reminder(self) -> None:
         now = int(datetime.datetime.now().timestamp()//1)
 

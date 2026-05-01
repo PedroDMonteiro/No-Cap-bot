@@ -1,11 +1,9 @@
 from discord.ext import commands
 from discord.ext.commands.context import Context
 
-from utils.configuration import DEVS
-
 def is_developer():
     async def predicate(ctx: Context):
-        if ctx.author.id not in DEVS:
+        if ctx.author.id not in ctx.bot.devs:
             raise commands.CheckFailure("Not dev")
 
         return True

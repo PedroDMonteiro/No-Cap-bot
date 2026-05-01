@@ -7,12 +7,12 @@ import requests
 from discord.ext import commands,tasks
 from discord.ext.commands.context import Context
 
-from discord import Embed, File, Message
+from discord import File, Member, Message
 
 
+from cogs.insta.models.insta import Insta
 from log import Log_Type
 from myBot import MyBot
-from models.insta_rank import Insta_Rank
 from utils import checks
 from utils.configuration import EMOJIS
 from utils.cog import Cog
@@ -30,7 +30,7 @@ MOD_ROLE = 'Insta-Mod'
 class Cog_Insta(Cog, name = "Insta"):
     CHANNEL_ID = 1135931353720963072
     ROLE = 893650528981098558
-
+    
     async def cog_load(self):
         self.database = db()
         # Registrar a view persistente
@@ -41,65 +41,100 @@ class Cog_Insta(Cog, name = "Insta"):
         
         await super().cog_load()
     
-    async def get_winner(self) -> Insta_Rank:
+    async def get_current_winner(self) -> tuple[Member,Insta]:
         guild = self.bot.get_guild(self.bot.guild_id)
 
-        winners = self.database.get_ordered_rank()
-        for winner_rank in winners:
-            winner = await guild.fetch_member(winner_rank.user_id)
+        posts = self.database.get_all()
+        posts = sorted(posts,reverse=True)
+        for post in posts:
+            winner = await guild.fetch_member(post.user_id)
             if winner:
-                return winner_rank
+                return winner, post
+            
+        return None
+
+    async def save_winner(self, winner: Insta, delete_olds: bool = False) -> str:
+        dir = "cogs/insta/winner"
+        if delete_olds:
+            to_remove = sorted([filename for filename in os.listdir(dir) if os.path.isfile(f"{dir}/{filename}")])[4:]
+            for file in to_remove:
+                os.remove(file)
+
+        path = f"{dir}/{int(datetime.datetime.now().timestamp()//1)}.{winner.extension}"
+
+        message = await self.channel.fetch_message(winner.message_id)
+
+        def save_file():
+            buffer = BytesIO(requests.get(message.attachments[0].url).content)
+            with open(path, "wb") as binary_file:
+                binary_file.write(buffer.getvalue())
+        await asyncio.to_thread(save_file)
+
+        return path
+    
+    async def clear_posts(self):
+        for message_id in self.database.get_all_messages_id():
+            try:
+                await (await self.channel.fetch_message(message_id)).delete()
+            except Exception as err:
+                await self.bot.log.embed(type=Log_Type.ERROR,
+                                            module=self,
+                                            message=f"Error to delete insta message: {err}")
+
+        self.database.clear()
+
+    async def update_role(self, winner: Member):
+        role = self.bot.get_guild(self.bot.guild_id).get_role(Cog_Insta.ROLE)
+        for member in role.members:
+            await member.remove_roles(role)
+        await winner.add_roles(role)
 
     async def define_winner(self):
         try:
-            guild = self.bot.get_guild(self.bot.guild_id)
-            winner = await self.get_winner()
-            if winner is None:
+            winner_member, winner_post = await  self.get_current_winner()
+            if winner_member is None:
+                await self.bot.log.embed(type=Log_Type.DEFAULT,module=self,message="Nenhum post tem usuário válido no servidor")
                 return
-            
-            winner_member = await guild.fetch_member(winner.user_id)
-            winner_message = await self.channel.fetch_message(winner.message_id)
-            extension = winner_message.attachments[0].url.split("?")[0].split("/")[-1].split(".")[-1]
 
-            role = guild.get_role(Cog_Insta.ROLE)
-            for member in role.members:
-                await member.remove_roles(role)
+            self.update_role(winner_member)
 
-            await winner_member.add_roles(role)
-            
-            def save_file():
-                buffer = BytesIO(requests.get(winner_message.attachments[0].url).content)
-                with open(f"cogs/insta/winner.{extension}", "wb") as binary_file:
-                    binary_file.write(buffer.getvalue())
-            await asyncio.to_thread(save_file)
+            path = await self.save_winner(winner_post)
 
-            winner_file = File(f"cogs/insta/winner.{extension}",filename=f"insta.{extension}")
-            message: Message = await self.bot.log.embed(type=Log_Type.DEFAULT,
-                                               module=self.__cog_name__,
-                                               message=f"Winner {winner_member}", file=winner_file)
-            winner_file_url = message.embeds[0].image.url
+            embed, files = Embeds.winner(winner=winner_member,
+                                         likes=winner_post.num_likes(),
+                                         path=path,
+                                         extenson=winner_post.extension)
 
-            embed, _ = Embeds.winner(winner=winner_member,
-                                     likes=winner.num_likes,
-                                     img_url=winner_file_url)
+            await self.channel.send(f"<@{winner_member.id}>",embed=embed,files=files)
 
-            await self.channel.send(f"<@{winner.user_id}>",embed=embed)
-
-            for message_id in self.database.get_all_messages_id():
-                try:
-                    await (await self.channel.fetch_message(message_id)).delete()
-                except Exception as err:
-                    await self.bot.log.embed(type=Log_Type.ERROR,
-                                             module=self.__cog_name__,
-                                             message=f"Error to delete insta message: {err}")
-
-            self.database.clear()
-
-            os.remove(f"cogs/insta/winner.{extension}")
+            self.clear_posts()
         except Exception as err:
             await self.bot.log.embed(type=Log_Type.ERROR,
-                                     module=self.__cog_name__,
+                                     module=self,
                                      message=f"Error to define winner: {err}")
+            
+    async def simulate_winner(self, context: Context):
+        try:
+            winner_member, winner_post = await  self.get_current_winner()
+            if winner_member is None:
+                await self.bot.log.embed(type=Log_Type.DEFAULT,module=self,message="Nenhum post tem usuário válido no servidor")
+                return
+
+            path = await self.save_winner(winner_post,delete_olds=False)
+
+            embed, files = Embeds.winner(winner=winner_member,
+                                         likes=winner_post.num_likes(),
+                                         path=path,
+                                         extension=winner_post.extension)
+
+            await context.send(f"<@{winner_member.id}>",embed=embed,files=files)
+
+            os.remove(path)
+            
+        except Exception as err:
+            await self.bot.log.embed(type=Log_Type.ERROR,
+                                     module=self,
+                                     message=f"Error in simulate winner: {err}")
 
     @tasks.loop(time=datetime.time(hour=19))
     async def insta_loop(self) -> None:
@@ -119,39 +154,77 @@ class Cog_Insta(Cog, name = "Insta"):
     async def before_update_bot(self):
         await self.bot.wait_until_ready()
 
+    async def create_post(self, message: Message):
+        text = ""
+        text += f"<@{message.author.id}>"
+        if len(message.content) > 0:
+            text += f"\n> {message.content.replace("\n","\n> ")}"
+
+        try:
+            file = await message.attachments[0].to_file()
+            extension = file.filename.split(".")[1]
+        except Exception as err:
+            self.bot.log.embed(Log_Type.ERROR,module=self,message=f"Erro ao criar post: {err}")
+            await message.reply("Houve algo de errado com sua foto, mande novamente",delete_after=5)
+            return
+
+        insta_message = await message.channel.send(text,file=file,view=Post())
+        self.database.add_post(message_id=insta_message.id,
+                               user_id=message.author.id,
+                               extension=extension)
+    
+    async def send_help(self, member: Member):
+        try:
+            await member.send(f"Mande sua foto com alguma descrição em <#{self.channel.id}>\nEu tomo conta do resto :wink:")
+        except Exception as err:
+            print(member)
+            await self.bot.log.embed(Log_Type.ERROR,module=self,message=f"Erro ao mandar help: {err}")
+
     @commands.Cog.listener()
     async def on_message(self, message: Message):
         if message.author.id == self.bot.user.id:
             return
         
         if message.channel.id == Cog_Insta.CHANNEL_ID:
-            if len(message.attachments) > 0:
-                text = ""
-                text += f"<@{message.author.id}>"
-                if len(message.content) > 0:
-                    text += f"\n> {message.content.replace("\n","\n> ")}"
-                try:
-                    file = await message.attachments[0].to_file()
-                except Exception as err:
-                    print(f"Erro ao pegar arquivo\n{err}")
-                insta_message = await message.channel.send(text,file=file,view=Post())
-                self.database.add_insta(message_id=insta_message.id,
-                                        user_id=message.author.id)
-            await message.delete()
+            if len(message.attachments) == 0:
+                await self.send_help(message.author)
+            else:
+                await self.create_post(message)
 
-    @commands.group()
+            try:
+                await message.delete()
+            except:
+                pass
+                #message already deleted
+
+    @commands.group(invoke_without_command=True)
     async def insta(self, context: Context):
         ...
 
     @insta.command()
     @checks.is_adm()
+    async def update(self, context: Context):
+        ...
+
+    @insta.group(invoke_without_command=True)
+    @checks.is_adm()
     async def winner(self, context: Context):
         await self.define_winner()
         await context.reply("Vencedor atualizado",mention_author=False)
 
+    @winner.command(name="check")
+    @checks.is_adm()
+    async def winner_check(self, context: Context):
+        await self.simulate_winner(context)
+
+    @winner.command(name="simulate")
+    @checks.is_adm()
+    async def winner_simulate(self, context: Context):
+        ...
+
     @insta.command()
     @checks.is_adm()
-    async def winner_test(self, context: Context):
+    async def check(self, context: Context):
         try:
             guild = self.bot.get_guild(self.bot.guild_id)
             winner = await self.get_winner()
@@ -161,13 +234,7 @@ class Cog_Insta(Cog, name = "Insta"):
             winner_member = await guild.fetch_member(winner.user_id)
             winner_message = await self.channel.fetch_message(winner.message_id)
             extension = winner_message.attachments[0].url.split("?")[0].split("/")[-1].split(".")[-1]
-
-            # role = guild.get_role(Cog_Insta.ROLE)
-            # for member in role.members:
-            #     await member.remove_roles(role)
-
-            # await winner_member.add_roles(role)
-            
+            print(extension)
             def save_file():
                 buffer = BytesIO(requests.get(winner_message.attachments[0].url).content)
                 with open(f"cogs/insta/winner.{extension}", "wb") as binary_file:
@@ -175,30 +242,13 @@ class Cog_Insta(Cog, name = "Insta"):
             await asyncio.to_thread(save_file)
 
             winner_file = File(f"cogs/insta/winner.{extension}",filename=f"insta.{extension}")
-            message: Message = await self.bot.log.embed(type=Log_Type.DEFAULT,
-                                               module=self.__cog_name__,
-                                               message=f"Winner {winner_member}", file=winner_file)
-            winner_file_url = message.embeds[0].image.url
-
-            embed, _ = Embeds.winner(winner=winner_member,
-                                     likes=winner.num_likes,
-                                     img_url=winner_file_url)
-
-            channel = self.bot.log.channels["debug"]
-            await channel.send(f"<@{winner.user_id}>",embed=embed)
-
-            for message_id in self.database.get_all_messages_id():
-                try:
-                    await (await self.channel.fetch_message(message_id)).delete()
-                except Exception as err:
-                    await self.bot.log.embed(type=Log_Type.ERROR,
-                                             module=self.__cog_name__,
-                                             message=f"Error to delete insta message: {err}")
-
-            # self.database.clear()
-
+            await self.bot.log.embed(type=Log_Type.DEBUG,
+                                     module=self,
+                                     message=f"Next winner {winner_member}",
+                                     file=winner_file)
+            
             os.remove(f"cogs/insta/winner.{extension}")
         except Exception as err:
             await self.bot.log.embed(type=Log_Type.ERROR,
-                                     module=self.__cog_name__,
+                                     module=self,
                                      message=f"Error to define winner: {err}")
