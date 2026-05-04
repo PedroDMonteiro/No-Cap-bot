@@ -78,8 +78,8 @@ class Cog_Insta(Cog, name = "Insta"):
                 await (await self.channel.fetch_message(message_id)).delete()
             except Exception as err:
                 await self.bot.log.embed(type=Log_Type.ERROR,
-                                            module=self,
-                                            message=f"Error to delete insta message: {err}")
+                                         module=self,
+                                         message=f"Error to delete insta message: {err}")
 
         self.database.clear()
 
@@ -96,18 +96,18 @@ class Cog_Insta(Cog, name = "Insta"):
                 await self.bot.log.embed(type=Log_Type.DEFAULT,module=self,message="Nenhum post tem usuário válido no servidor")
                 return
 
-            self.update_role(winner_member)
+            await self.update_role(winner_member)
 
             path = await self.save_winner(winner_post)
 
             embed, files = Embeds.winner(winner=winner_member,
                                          likes=winner_post.num_likes(),
                                          path=path,
-                                         extenson=winner_post.extension)
+                                         extension=winner_post.extension)
 
             await self.channel.send(f"<@{winner_member.id}>",embed=embed,files=files)
 
-            self.clear_posts()
+            await self.clear_posts()
         except Exception as err:
             await self.bot.log.embed(type=Log_Type.ERROR,
                                      module=self,
