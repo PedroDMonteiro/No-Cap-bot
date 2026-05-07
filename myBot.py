@@ -5,6 +5,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from log import Log, Log_Type
 
+PREFIXES = ["nc!",".","Nc!","NC!","nC!"]
 class MyBot(commands.Bot):
     def __init__(self,
                  guild: int,
@@ -13,7 +14,7 @@ class MyBot(commands.Bot):
                  ):
         
         load_dotenv(dotenv_path='./config.env')
-        super().__init__(command_prefix=commands.when_mentioned_or("nc!"),
+        super().__init__(command_prefix=commands.when_mentioned_or(*PREFIXES),
                          case_insensitive=True,
                          intents=discord.Intents.all(),)
         
