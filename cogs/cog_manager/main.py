@@ -9,9 +9,9 @@ from myBot import MyBot
 from utils.cog import Cog
 
 async def setup(bot: MyBot):
-    await bot.add_cog(Cog_Cog_Maneger(bot))
+    await bot.add_cog(Cog_Cog_Manager(bot))
 
-class Cog_Cog_Maneger(Cog, name = "Cog_Maneger"):
+class Cog_Cog_Manager(Cog, name = "Cog_Manager"):
     @commands.guild_only()
     @commands.group(name="cog",
                     aliases=["cogs"],
@@ -19,8 +19,8 @@ class Cog_Cog_Maneger(Cog, name = "Cog_Maneger"):
     async def cogs(self, context: Context):
         if context.subcommand_passed == None:
             await context.send("Cogs carregados:\n")
-            for c in self.bot.loaded_cogs:
-                await context.send(f"{c}\n")
+            for cog in self.bot.loaded_cogs:
+                await context.send(f"{cog}\n")
 
     @cogs.command(name="load",
                   aliases=["l"])
@@ -30,27 +30,34 @@ class Cog_Cog_Maneger(Cog, name = "Cog_Maneger"):
             await context.send(f"`{cog_name}` already loaded\n-# Use nc!cog unload or nc!cog reload")
             return
         
-        await self.load(cog_name)
+        if not (await self.load(cog_name)):
+            await context.send(f"Erro ao carregar {cog_name }.")
+            return
+        
         await context.send(f"{cog_name} carregado.")
 
-    async def load(self, cog_name: str):
+    async def load(self, cog_name: str) -> bool:
         for filename in os.listdir(f"./cogs/{cog_name}"):
-            try:
-                if filename.endswith(".py"):
-                    await self.bot.load_extension(f"cogs.{cog_name}.{filename[:-3]}")
-                    self.bot.log.print(Log_Type.DEBUG,
-                                       f"{cog_name}.{filename[:-3]} loaded")
-            except Exception as err:
-                await self.bot.log.embed(type=Log_Type.ERROR,module="Cog Loader",message=f"Error to load {cog_name}: {err}")
-                await self.unload(cog_name)
-                return
+            if filename.endswith(".py"):
+                extension = f"cogs.{cog_name}.{filename[:-3]}"
+                try:
+                    await self.bot.load_extension(extension)
+                    # self.bot.log.print(Log_Type.DEBUG,
+                    #                    f"{cog_name}.{filename[:-3]} loaded")
+                except Exception as err:
+                    await self.bot.log.embed(type=Log_Type.ERROR,module=self,message=f"Error to load {extension}: {err}")
+                    await self.unload(cog_name)
+                    return False
         try:
             self.bot.loaded_cogs.add(cog_name)
             self.bot.log.print(Log_Type.DEBUG,
                                f"{cog_name} loaded")
         except Exception as err:
-            await self.bot.log.embed(type=Log_Type.ERROR,module="Loader",message=f"Error to load {cog_name}: {err}")
+            await self.bot.log.embed(type=Log_Type.ERROR,module=self,message=f"Error to load {cog_name}: {err}")
             await self.unload(cog_name)
+            return False
+        
+        return True
 
     @cogs.command(name="unload",
                   aliases=["u"])
@@ -64,28 +71,29 @@ class Cog_Cog_Maneger(Cog, name = "Cog_Maneger"):
         if cog_name not in self.bot.loaded_cogs:
             await context.send(f"`{cog_name}` not loaded\n-# Use nc!cog load or nc!cog reload")
             return
-        
-        await self.unload(cog_name)
-        await context.send(f"{cog_name} descarregado.")
+        try:
+            await self.unload(cog_name)
+            await context.send(f"{cog_name} descarregado.")
+        except:
+            ...
 
-    async def unload(self, cog_name: str):
-        try:
-            for filename in os.listdir(f"./cogs/{cog_name}"):
-                try:
-                    if filename.endswith(".py"):
-                        await self.bot.unload_extension(f"cogs.{cog_name}.{filename[:-3]}")
-                        self.bot.log.print(Log_Type.DEBUG,
-                                           f"{cog_name}.{filename[:-3]} unloaded")
-                except Exception as err:
-                    await self.bot.log.embed(type=Log_Type.ERROR,module="Loader",message=f"Error to unload {cog_name}: {err}")
-        except:
-            ...
-        try:
-            self.bot.loaded_cogs.remove(cog_name)
-        except:
-            ...
+    async def unload(self, cog_name: str) -> bool:
+        for filename in os.listdir(f"./cogs/{cog_name}"):
+            try:
+                if filename.endswith(".py"):
+                    await self.bot.unload_extension(f"cogs.{cog_name}.{filename[:-3]}")
+                    # self.bot.log.print(Log_Type.DEBUG,
+                    #                    f"{cog_name}.{filename[:-3]} unloaded")
+            except Exception as err:
+                await self.bot.log.embed(type=Log_Type.ERROR,module=self,message=f"Error to unload {cog_name}: {err}")
+                return False
+        
+        self.bot.loaded_cogs.discard(cog_name)
+
         self.bot.log.print(Log_Type.DEBUG,
                            f"{cog_name} unloaded")
+        return True
+        
 
     @cogs.command(name="reload",
                   aliases=["r"])
