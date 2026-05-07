@@ -93,7 +93,14 @@ class Cog_Cog_Manager(Cog, name = "Cog_Manager"):
         self.bot.log.print(Log_Type.DEBUG,
                            f"{cog_name} unloaded")
         return True
+    
+    async def reload(self, cog_name: str) -> bool:
+        if not (await self.unload(cog_name)):
+            return False
+        if not (await self.load(cog_name)):
+            return False
         
+        return True
 
     @cogs.command(name="reload",
                   aliases=["r"])
@@ -108,6 +115,8 @@ class Cog_Cog_Manager(Cog, name = "Cog_Manager"):
             await context.send(f"`{cog_name}` not loaded\n-# Use nc!cog load")
             return
 
-        await self.unload(cog_name)
-        await self.load(cog_name)
-        await context.send(f"{cog_name} recarregado.")
+        if not (await self.reload(cog_name)):
+            await context.send(f"Erro ao recarrecar `{cog_name}`.")
+            return
+        
+        await context.send(f"{cog_name} recarregado")
