@@ -3,16 +3,14 @@ from typing import Sequence
 from utils.erros.database import *
 
 import mariadb
-DATABASE = os.getenv("DATABASE")
-PASSWORD = os.getenv("DATABASE_PASSWORD")
 
 class Database():
     def __get_connection(self):
         return mariadb.connect(user="root",
-                               password=PASSWORD,
+                               password=os.getenv("DATABASE_PASSWORD"),
                                host="localhost",
                                port=3306,
-                               database=DATABASE,
+                               database=os.getenv("DATABASE"),
                                )
 
     def __execute(self, cursor: mariadb.cursors.Cursor, sql: str, args: Sequence):
