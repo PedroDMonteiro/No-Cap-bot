@@ -73,9 +73,9 @@ class Cog_Insta(Cog, name = "Insta"):
         return path
     
     async def clear_posts(self):
-        for message_id in self.database.get_all_messages_id():
+        for post in self.database.get_all():
             try:
-                await (await self.channel.fetch_message(message_id)).delete()
+                await (await self.channel.fetch_message(post.message_id)).delete()
             except Exception as err:
                 await self.bot.log.embed(type=Log_Type.ERROR,
                                          module=self,
@@ -212,43 +212,8 @@ class Cog_Insta(Cog, name = "Insta"):
         await self.define_winner()
         await context.reply("Vencedor atualizado",mention_author=False)
 
-    @winner.command(name="check")
+    @winner.command(name="check",
+                    aliases=["simulate"])
     @checks.is_adm()
     async def winner_check(self, context: Context):
         await self.simulate_winner(context)
-
-    @winner.command(name="simulate")
-    @checks.is_adm()
-    async def winner_simulate(self, context: Context):
-        ...
-
-    @insta.command()
-    @checks.is_adm()
-    async def check(self, context: Context):
-        try:
-            guild = self.bot.get_guild(self.bot.guild_id)
-            winner = await self.get_winner()
-            if winner is None:
-                return
-            
-            winner_member = await guild.fetch_member(winner.user_id)
-            winner_message = await self.channel.fetch_message(winner.message_id)
-            extension = winner_message.attachments[0].url.split("?")[0].split("/")[-1].split(".")[-1]
-            print(extension)
-            def save_file():
-                buffer = BytesIO(requests.get(winner_message.attachments[0].url).content)
-                with open(f"cogs/insta/winner.{extension}", "wb") as binary_file:
-                    binary_file.write(buffer.getvalue())
-            await asyncio.to_thread(save_file)
-
-            winner_file = File(f"cogs/insta/winner.{extension}",filename=f"insta.{extension}")
-            await self.bot.log.embed(type=Log_Type.DEBUG,
-                                     module=self,
-                                     message=f"Next winner {winner_member}",
-                                     file=winner_file)
-            
-            os.remove(f"cogs/insta/winner.{extension}")
-        except Exception as err:
-            await self.bot.log.embed(type=Log_Type.ERROR,
-                                     module=self,
-                                     message=f"Error to define winner: {err}")

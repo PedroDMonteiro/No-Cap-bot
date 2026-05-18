@@ -1,9 +1,9 @@
-from discord import Embed, File, Member
+from discord import File, Member
 from utils.configuration import EMOJIS
-
 
 from myBot import MyBot
 from utils.utils import Utils
+from utils.embed import Embed
 
 async def setup(bot: MyBot):
     pass
