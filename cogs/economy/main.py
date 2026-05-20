@@ -9,6 +9,7 @@ from discord.ext.commands.context import Context
 
 from myBot import MyBot
 from cogs.economy.sqls import Database as db
+from cogs.economy.models.user import User as md_User
 from log import Log_Type
 from utils import checks
 from utils.erros.database import User_Not_Found
@@ -46,7 +47,7 @@ class Cog_Economy(Cog, name = "Economy"):
                         866904119167942656 , # memes
                         ]
         self.call_xp = [859442274698264586]
-        self.call_vips = [860330511787622400]
+        self.call_vips_category = [860330511787622400]
         self.talking = {}
         self.bankers = [528555826047352833, # Kadode
                         ]
@@ -71,6 +72,34 @@ class Cog_Economy(Cog, name = "Economy"):
             return
         self.new_member(member)
 
+    def calc_msg_xp(self, member_id: int) -> int:
+        xp = random.randint(1,15)
+        xp *= self.database.get_xp_multiplier(member_id)
+
+        return int(xp//1)
+
+    
+    def calc_call_coins(start_talking_timestamp: int) -> int:
+        seconds_talking = int(datetime.datetime.now().timestamp()//1) - start_talking_timestamp
+
+        # 5 coins per hour
+        coins = 5*(seconds_talking//(60*60))
+
+        return int(coins//1)
+
+    def calc_call_xp(self, member_id:int, channel) -> int:
+        seconds_talking = int(datetime.datetime.now().timestamp()//1) - self.talking[member_id]
+
+        # 15xp per 10 min
+        xp = 15*(seconds_talking/(10*60))
+        xp *= self.database.get_xp_multiplier(member_id)
+
+        if channel.category_id in self.call_vips_category:
+            xp *= 0.8
+
+        return int(xp//1)
+    
+
     @commands.Cog.listener()
     async def on_message(self, message: Message):
         if message.author.bot:
@@ -82,45 +111,46 @@ class Cog_Economy(Cog, name = "Economy"):
         if message.channel.id not in self.chat_xp:
             return
         
-        
         member = message.author
         self.in_cooldown.add(member.id)
 
-        xp = random.randint(1,15)
-        multiplier = self.database.get_xp_multiplier(member_id=member.id)
-        # self.bot.log.print(Log_Type.DEBUG,
-        #                    module=self.__cog_name__,
-        #                    message=f"{member}: {multiplier}")
-        xp = int(xp*multiplier//1)
+        if self.database.get(member) is None:
+            self.new_member()
+            
+        xp = self.calc_msg_xp()
         self.database.add_xp(identifier=member.id,points=xp)
         
         await asyncio.sleep(15)
         self.in_cooldown.remove(member.id)
 
-    async def add_talking_prizes(self, member_id: int, multiplier: float = 1.0):
-        if member_id not in self.talking:
+    async def add_call_reward(self, member: Member, channel):
+        if member.id not in self.talking:
             return
+        
+        if self.database.get(member) is None:
+            self.new_member()
 
-        now = int(datetime.datetime.now().timestamp()//1)
+        xp = self.calc_call_xp(member, channel)
+        coins = self.calc_call_coins(member, channel)
 
-        seconds_talking = now - self.talking[member_id]
-        # 15xp per 10 min
-        xp = 15*(seconds_talking/(10*60))
-        xp *= multiplier
-        xp = int(xp//1) 
-        self.database.add_xp(identifier=member_id,points=xp)
+        user = self.database.add_xp(identifier=member,points=xp)
+        user = self.database.add_coins(identifier=member,coins=coins)
 
-        # 5 coins per hour
-        coins = 5*(seconds_talking//(60*60))
-        self.database.add_coins(identifier=member_id,coins=coins)
-        self.talking.pop(member_id, 0)
+        seconds_talking = int(datetime.datetime.now().timestamp()//1) - self.talking[member.id]
+        self.talking.pop(member.id, 0)
 
         await self.bot.log.embed(type=Log_Type.CALL,
                                  module=f"{self} (Call)",
-                                 message=f"<@{member_id}>\n-# {Utils.format_seconds(seconds_talking)}\n\n+ {xp} xp\n+ {coins} moedas")
+                                 message=f"<@{member.id}>\n-# {Utils.format_seconds(seconds_talking)}\n\n+ {xp} xp\n+ {coins} moedas")
 
+    # before.channel -> channel where member WAS
+    # after.channel  -> channel where member IS
+    # both (before/after).channel are updated with current status
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState):
+        if member.bot:
+            return
+        
         if after.channel is None and before.channel is None:
             print("what??")
             return
@@ -134,46 +164,42 @@ class Cog_Economy(Cog, name = "Economy"):
         now = int(datetime.datetime.now().timestamp()//1)
 
         if talking(before):
-            multiplier = 1
-            if before.channel.category_id in self.call_vips:
-                multiplier = 0.8
-
-            await self.add_talking_prizes(member_id=member.id, multiplier=multiplier)
+            await self.add_call_reward(member=member, channel=before.channel)
 
             members_talking_before = [m for m in before.channel.members
                                       if (not m.bot) and talking(m.voice)]
             if len(members_talking_before) == 1:
-                await self.add_talking_prizes(member_id=members_talking_before[0].id,multiplier=multiplier)
+                await self.add_call_reward(member=members_talking_before[0],channel=before.channel)
 
+        # start counting time talking when 2 or more people talking in call
         if talking(after):
             if after.channel.category_id not in self.call_xp+self.call_vips:
                 return
 
-
             members_talking_after = [m for m in after.channel.members 
                                     if (not m.bot) and talking(m.voice)]
-            if len(members_talking_after) >= 2:
-                self.talking[member.id] = now
 
             if len(members_talking_after) == 2:
-                other_id = members_talking_after[0].id
-                if other_id == member.id:
-                    other_id = members_talking_after[1].id
+                for call_member in members_talking_after:
+                    self.talking[call_member.id] = now
 
-                self.talking[other_id] = now
+            if len(members_talking_after) > 2:
+                self.talking[member.id] = now
         
-        # self.check_level(member_id)
-        # 
-
     @commands.group(name="balance",
                     aliases=["bal","atm","saldo","coins","moedas","moeda"],
                     invoke_without_command=True)
-    async def balance(self, context: Context, member: Member = None):
-        if context.subcommand_passed == None:
-            if member is None:
-                member = context.author
-            user = self.database.get(identifier=member)
-            await context.reply(f"{member.display_name} tem {user.coins} {"dobrão" if user.coins == 1 else "dobrões"}")
+    async def balance(self, context: Context, member: Member|int = None):
+        if member is None:
+            member = context.author
+
+        user = self.database.get(identifier=member)
+        if user is None:
+            if isinstance(member,Member):
+                member = member.name
+            await context.reply(f"`{member}` não casdastrado")
+
+        await context.reply(f"{member.display_name} tem {user.coins} {"dobrão" if user.coins == 1 else "dobrões"}")
 
     @checks.is_banker()
     @balance.command(name="add")
@@ -205,31 +231,53 @@ class Cog_Economy(Cog, name = "Economy"):
     @commands.group(name="experience",
                     aliases=["xp","nivel","level",],
                     invoke_without_command=True)
-    async def experience(self, context: Context, member: Member = None):
-        if context.subcommand_passed == None:
-            if member is None:
-                member = context.author
-            user = self.database.get(identifier=member)
-            await context.reply(f"{member} tem {user.xp} xp")
+    async def experience(self, context: Context, member: Member | int = None):
+        if member is None:
+            member = context.author
+        user = self.database.get(identifier=member)
+        if user is None:
+            if isinstance(member,Member):
+                member = member.name
+            await context.reply(f"`{member}` não casdastrado")
 
+        await context.reply(f"{member} tem {user.xp} xp")
+
+    @checks.is_adm()
     @experience.command(name="add")
     async def experience_add(self, context: Context, member: Member| int, points: int):
         if points < 0:
             await context.send("Give a positive amount of xp")
 
-        user = self.database.add_xp(identifier=member,points=points)
+        try:
+            user = self.database.add_xp(identifier=member,points=points)
+        except User_Not_Found as err:
+            await context.reply(f"`{err.identifier}` não casdastrado")
+            return
+        
         await context.reply(f"`{user.username}` agora tem {user.xp} xp")
 
+    @checks.is_adm()
     @experience.command(name="remove")
     async def experience_remove(self, context: Context, member: Member| int, points: int):
         if points < 0:
             await context.send("Give a positive amount of xp")
-        user = self.database.remove_xp(identifier=member,points=points)
+        try:
+            user = self.database.remove_xp(identifier=member,points=points)
+        except User_Not_Found as err:
+            await context.reply(f"`{err.identifier}` não casdastrado")
+            return
+        
         await context.reply(f"`{user.username}` agora tem {user.xp} xp")
 
+    @checks.is_adm()
     @experience.command(name="edit")
     async def experience_edit(self, context: Context, member: Member| int, points: int):
-        user = self.database.set_xp(identifier=member,points=points)
+        try:
+            user = self.database.set_xp(identifier=member,points=points)
+        except User_Not_Found as err:
+            await context.reply(f"`{err.identifier}` não casdastrado")
+            return
+        
         await context.reply(f"`{user.username}` agora tem {user.xp} xp")
 
     @experience.command(name="top",aliases=["rank"])
@@ -243,13 +291,18 @@ class Cog_Economy(Cog, name = "Economy"):
 
     def new_member(self, member:Member):
         try:
-            user = self.database.get(member.id)
+            self.database.new_member(member)
         except Exception as err:
-            if isinstance(err,User_Not_Found):
-                self.database.new_member(member)
-            else:
-                raise(err)
-            
+            raise(err)
+
+    @checks.is_adm()
+    @commands.command()
+    async def new(self, context: Context):
+        try:
+            self.new_member(context.author)
+        except Exception as err:
+            await context.send(type(err))
+
     def check_level(self, member: Member):
         try:
             self.database.get_level(member.id)
