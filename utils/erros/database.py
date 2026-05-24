@@ -44,7 +44,7 @@ class User_Not_Found(Exception):
         super().__init__()
 
     def __str__(self):
-        return f"`{self.identifier}` não cadastrado"
+        return f"Usuário`{self.identifier}` não cadastrado"
     
 class Table_Not_Found(Custom_Exception):
     def __init__(self, table):

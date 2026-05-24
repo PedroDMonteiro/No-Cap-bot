@@ -46,8 +46,9 @@ class Cog_Economy(Cog, name = "Economy"):
                         866907725463289926 , # comandos
                         866904119167942656 , # memes
                         ]
-        self.call_xp = [859442274698264586]
-        self.call_vips_category = [860330511787622400]
+        self.call_xp_category = [859442274698264586, # general
+                                 860330511787622400, # vips
+                                 ]
         self.talking = {}
         self.bankers = [528555826047352833, # Kadode
                         ]
@@ -78,12 +79,14 @@ class Cog_Economy(Cog, name = "Economy"):
 
         return int(xp//1)
 
-    
-    def calc_call_coins(start_talking_timestamp: int) -> int:
-        seconds_talking = int(datetime.datetime.now().timestamp()//1) - start_talking_timestamp
+    def calc_call_coins(self, member_id: int, channel) -> int:
+        seconds_talking = int(datetime.datetime.now().timestamp()//1) - self.talking[member_id]
 
         # 5 coins per hour
         coins = 5*(seconds_talking//(60*60))
+
+        if channel.category_id != self.call_xp_category[0]:
+            coins *= 0.8
 
         return int(coins//1)
 
@@ -94,12 +97,11 @@ class Cog_Economy(Cog, name = "Economy"):
         xp = 15*(seconds_talking/(10*60))
         xp *= self.database.get_xp_multiplier(member_id)
 
-        if channel.category_id in self.call_vips_category:
+        if channel.category_id != self.call_xp_category[0]:
             xp *= 0.8
 
         return int(xp//1)
     
-
     @commands.Cog.listener()
     async def on_message(self, message: Message):
         if message.author.bot:
@@ -115,9 +117,9 @@ class Cog_Economy(Cog, name = "Economy"):
         self.in_cooldown.add(member.id)
 
         if self.database.get(member) is None:
-            self.new_member()
+            self.new_member(member=member)
             
-        xp = self.calc_msg_xp()
+        xp = self.calc_msg_xp(member_id=member.id)
         self.database.add_xp(identifier=member.id,points=xp)
         
         await asyncio.sleep(15)
@@ -128,10 +130,10 @@ class Cog_Economy(Cog, name = "Economy"):
             return
         
         if self.database.get(member) is None:
-            self.new_member()
+            self.new_member(member)
 
-        xp = self.calc_call_xp(member, channel)
-        coins = self.calc_call_coins(member, channel)
+        xp = self.calc_call_xp(member_id=member.id, channel=channel)
+        coins = self.calc_call_coins(member_id=member.id, channel=channel)
 
         user = self.database.add_xp(identifier=member,points=xp)
         user = self.database.add_coins(identifier=member,coins=coins)
@@ -173,7 +175,7 @@ class Cog_Economy(Cog, name = "Economy"):
 
         # start counting time talking when 2 or more people talking in call
         if talking(after):
-            if after.channel.category_id not in self.call_xp+self.call_vips:
+            if after.channel.category_id not in self.call_xp_category:
                 return
 
             members_talking_after = [m for m in after.channel.members 
