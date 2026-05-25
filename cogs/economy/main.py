@@ -12,7 +12,7 @@ from cogs.economy.sqls import Database as db
 from cogs.economy.models.user import User as md_User
 from log import Log_Type
 from utils import checks
-from utils.erros.database import User_Not_Found
+from utils.erros.database import Primary_Key_Duplicate, User_Not_Found
 from utils.utils import Utils
 from utils.cog import Cog
 
@@ -294,8 +294,8 @@ class Cog_Economy(Cog, name = "Economy"):
     def new_member(self, member:Member):
         try:
             self.database.new_member(member)
-        except Exception as err:
-            raise(err)
+        except Primary_Key_Duplicate as err:
+            self.database.remove_coins(identifier=member,coins=50)
 
     @checks.is_adm()
     @commands.command()
