@@ -44,14 +44,15 @@ class Cog_Insta(Cog, name = "Insta"):
     async def get_current_winner(self) -> tuple[Member,Insta]:
         guild = self.bot.get_guild(self.bot.guild_id)
 
-        posts = self.database.get_all()
-        posts = sorted(posts,reverse=True)
-        for post in posts:
-            winner = await guild.fetch_member(post.user_id)
-            if winner:
-                return winner, post
+        for post in self.database.get_ordered_rank(limit=10):
+            try:
+                winner = await guild.fetch_member(post.user_id)
+                print(self.winner)
+                return winner, self.database.get_by_message_id(message_id=post.message_id)
+            except:
+                ...
             
-        return None
+        return None, None
 
     async def save_winner(self, winner: Insta, delete_olds: bool = False) -> str:
         dir = "cogs/insta/winner"

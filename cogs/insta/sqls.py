@@ -66,10 +66,15 @@ class Database(db):
 
         return len(self.get_comments(message_id=message_id))
         
-    def get_all(self, ) -> list[Insta]:
+    def get_all(self, limit: int = None) -> list[Insta]:
+        args = []
         sql = ""
         sql += "\n"+f"SELECT message_id,user_id,extension"
         sql += "\n"+f"FROM insta"
+        if limit:
+            sql += "\n"+f"LIMIT ?"
+            args.append(limit)
+
         posts: list[Insta] = []
         
         for row in self.select_all(sql):
@@ -161,15 +166,19 @@ class Database(db):
     def clear(self, ) -> None:
         self.delete()
 
-    def get_ordered_rank(self, ) -> list[Insta]:
+    def get_ordered_rank(self, limit: int = None) -> list[Insta]:
+        args = []
         sql = ""
-        sql += "\n"+f"SELECT user_id,message_id,rank,likes,comments,extension"
+        sql += "\n"+f"SELECT user_id,message_id,rank"
         sql += "\n"+f"FROM view_insta_rank "
-        rows = self.select_all(sql)
+        if limit:
+            sql += "\n"+f"LIMIT ?"
+            args.append(limit)
+
+        rows = self.select_all(sql,args)
 
         return [Insta(user_id=int(row[0]),
                         message_id=int(row[1]),
                         rank=int(row[2]),
-                        num_likes=int(row[3]),
-                        num_comments=int(row[4]),
+                        extension="",
                         ) for row in rows]
