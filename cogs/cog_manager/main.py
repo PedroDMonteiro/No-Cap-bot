@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import os
 
 from discord.ext import commands
@@ -26,37 +28,47 @@ class Cog_Cog_Manager(Cog, name = "Cog_Manager"):
                   aliases=["l"])
     @checks.is_developer()
     async def cogs_load(self, context: Context, cog_name: str):
-        if cog_name in self.bot.loaded_cogs:
-            await context.send(f"`{cog_name}` already loaded\n-# Use nc!cog unload or nc!cog reload")
+        cog_name = cog_name.lower()
+        if cog_name == "cogs":
+            await context.send(f"Any changes at Cogs management module, require bot reboot")
             return
-        
+
         if not (await self.load(cog_name)):
-            await context.send(f"Erro ao carregar {cog_name }.")
+            await context.send(f"Falha ao carregar {cog_name }.")
             return
         
         await context.send(f"{cog_name} carregado.")
 
     async def load(self, cog_name: str) -> bool:
+        if cog_name in self.bot.loaded_cogs:
+            await self.bot.log.embed(type=Log_Type.ERROR,
+                                     module=self,
+                                     message=f"Error to load {cog_name}: Already loaded")
+            return False
+        
+        ok = await self.__load_files(cog_name)
+        if not ok:
+            await self.unload(cog_name)
+            await self.bot.log.embed(type=Log_Type.ERROR,
+                                     module=self,
+                                     message=f"Error to load {cog_name}\n-# Check logs")
+            return False
+
+        self.bot.loaded_cogs.add(cog_name)
+        self.bot.log.print(Log_Type.DEBUG,f"{cog_name} loaded")
+        return True
+
+    async def __load_files(self, cog_name: str) -> bool:
         for filename in os.listdir(f"./cogs/{cog_name}"):
-            if filename.endswith(".py"):
+            if filename.endswith(".py") and not filename.startswith("__init__"):
                 extension = f"cogs.{cog_name}.{filename[:-3]}"
                 try:
                     await self.bot.load_extension(extension)
-                    # self.bot.log.print(Log_Type.DEBUG,
-                    #                    f"{cog_name}.{filename[:-3]} loaded")
                 except Exception as err:
-                    await self.bot.log.embed(type=Log_Type.ERROR,module=self,message=f"Error to load {extension}: {err}")
-                    await self.unload(cog_name)
+                    await self.bot.log.embed(type=Log_Type.ERROR,module=self,message=f"Error to load extension {extension}: {err}")
+                    await self.__unload_files(cog_name)
                     return False
-        try:
-            self.bot.loaded_cogs.add(cog_name)
-            self.bot.log.print(Log_Type.DEBUG,
-                               f"{cog_name} loaded")
-        except Exception as err:
-            await self.bot.log.embed(type=Log_Type.ERROR,module=self,message=f"Error to load {cog_name}: {err}")
-            await self.unload(cog_name)
-            return False
-        
+                
         return True
 
     @cogs.command(name="unload",
@@ -65,39 +77,51 @@ class Cog_Cog_Manager(Cog, name = "Cog_Manager"):
     async def cogs_unload(self, context: Context, cog_name: str):
         cog_name = cog_name.lower()
         if cog_name == "cogs":
-            await context.send(f"If wanna change something in cogs module restart me")
+            await context.send(f"Any changes at Cogs management module, require bot reboot")
             return
 
-        if cog_name not in self.bot.loaded_cogs:
-            await context.send(f"`{cog_name}` not loaded\n-# Use nc!cog load or nc!cog reload")
+        ok = await self.unload(cog_name)
+        if not ok:
+            await context.send(f"Falha ao descarregar {cog_name}")
             return
-        try:
-            await self.unload(cog_name)
-            await context.send(f"{cog_name} descarregado.")
-        except:
-            ...
+
+        await context.send(f"{cog_name} descarregado.")
 
     async def unload(self, cog_name: str) -> bool:
-        for filename in os.listdir(f"./cogs/{cog_name}"):
-            try:
-                if filename.endswith(".py"):
-                    await self.bot.unload_extension(f"cogs.{cog_name}.{filename[:-3]}")
-                    # self.bot.log.print(Log_Type.DEBUG,
-                    #                    f"{cog_name}.{filename[:-3]} unloaded")
-            except Exception as err:
-                await self.bot.log.embed(type=Log_Type.ERROR,module=self,message=f"Error to unload {cog_name}: {err}")
-                return False
+        if cog_name not in self.bot.loaded_cogs:
+            await self.bot.log.embed(type=Log_Type.ERROR,
+                                     module=self,
+                                     message=f"Error to unload {cog_name}: Not loaded")
+            return False
         
+        await self.__unload_files(cog_name)
         self.bot.loaded_cogs.discard(cog_name)
-
         self.bot.log.print(Log_Type.DEBUG,
                            f"{cog_name} unloaded")
         return True
     
+    async def __unload_files(self, cog_name: str):
+        for filename in os.listdir(f"./cogs/{cog_name}"):
+            if filename.endswith(".py") and not filename.startswith("__init__"):
+                extension = f"cogs.{cog_name}.{filename[:-3]}"
+                try:
+                    await self.bot.unload_extension(extension)
+                except Exception as err:
+                    await self.bot.log.embed(type=Log_Type.ERROR,module=self,message=f"Error to unload exetension {extension}: {err}")
+    
     async def reload(self, cog_name: str) -> bool:
-        if not (await self.unload(cog_name)):
+        ok = await self.unload(cog_name)
+        if not ok:
+            await self.bot.log.embed(type=Log_Type.ERROR,
+                                     module=self,
+                                     message=f"Error to reload {cog_name}: Error on unload")
             return False
-        if not (await self.load(cog_name)):
+        
+        ok = await self.load(cog_name)
+        if not ok:
+            await self.bot.log.embed(type=Log_Type.ERROR,
+                                     module=self,
+                                     message=f"Error to reload {cog_name}: Error on load")
             return False
         
         return True
@@ -108,15 +132,17 @@ class Cog_Cog_Manager(Cog, name = "Cog_Manager"):
     async def cogs_reload(self, context: Context, cog_name: str):
         cog_name = cog_name.lower()
         if cog_name == "cogs":
-            await context.send(f"If wanna change something in cogs module restart me")
+            await context.send(f"Any changes at Cogs management module, require bot reboot")
             return
 
-        if cog_name not in self.bot.loaded_cogs:
-            await context.send(f"`{cog_name}` not loaded\n-# Use nc!cog load")
-            return
-
-        if not (await self.reload(cog_name)):
+        ok = await self.reload(cog_name)
+        if not ok:
             await context.send(f"Erro ao recarrecar `{cog_name}`.")
             return
         
         await context.send(f"{cog_name} recarregado")
+
+            return
+        
+        await context.send(f"{cog_name} recarregado")        await self.bot.log.embed(Log_Type.DEBUG,module=self,message=f"{cog_name} criado")
+        await context.send(f"{cog_name} criado")
